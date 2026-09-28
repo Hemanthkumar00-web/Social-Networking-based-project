@@ -1,0 +1,11 @@
+Hi {{ user.username }},
+
+We received a request to reset your Instagram password.
+
+Click the link below to set a new password:
+{{ reset_url }}
+
+If you didn't request this, you can safely ignore this email.
+
+Thanks,
+Instagram Team

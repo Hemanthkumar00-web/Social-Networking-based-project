@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Profile - CrownX{% endblock %}
+
+{% block content %}
+<div class="main-container" style="padding-top:24px;">
+    <div class="modal-box" style="margin:0 auto;">
+        <div class="modal-header">
+            <span>Edit Profile</span>
+            <a href="{% url 'profile' request.user.username %}" class="modal-close">&times;</a>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+                {% if request.user.profile.profile_pic %}
+                    <img src="{{ request.user.profile.profile_pic.url }}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;">
+                {% else %}
+                    <div class="avatar-placeholder" style="width:56px;height:56px;font-size:20px;">{{ request.user.username|first|upper }}</div>
+                {% endif %}
+                <div>
+                    <div style="font-weight:600;">{{ request.user.username }}</div>
+                </div>
+            </div>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Profile Photo</label>
+                    <input type="file" name="profile_pic" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" value="{{ request.user.username }}" minlength="3" maxlength="30" pattern="[a-zA-Z0-9._]+" title="Only letters, numbers, periods and underscores">
+                    <small style="display:block;margin-top:4px;color:#a8a8a8;font-size:12px;">Letters, numbers, periods and underscores only. Min 3 characters.</small>
+                </div>
+                <div class="form-group">
+                    <label>First Name</label>
+                    <input type="text" name="first_name" value="{{ request.user.first_name }}">
+                </div>
+                <div class="form-group">
+                    <label>Last Name</label>
+                    <input type="text" name="last_name" value="{{ request.user.last_name }}">
+                </div>
+                <div class="form-group">
+                    <label>Bio</label>
+                    <textarea name="bio" placeholder="Tell people about yourself...">{{ request.user.profile.bio }}</textarea>
+                </div>
+                <button type="submit" class="btn-submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications - Instagram{% endblock %}
+
+{% block content %}
+<div class="main-container" style="padding-top:24px;">
+    <h2 style="font-size:24px;margin-bottom:20px;">Notifications</h2>
+    <div style="background:rgba(255,255,255,0.06);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;">
+        {% for n in notifs %}
+        <a href="{{ n.link }}" class="notif-item {% if not n.is_read %}unread{% endif %}">
+            {% if n.actor.profile.profile_pic %}
+                <img src="{{ n.actor.profile.profile_pic.url }}" alt="">
+            {% else %}
+                <div class="avatar-placeholder" style="width:44px;height:44px;font-size:16px;flex-shrink:0;">{{ n.actor.username|first|upper }}</div>
+            {% endif %}
+            <span class="notif-text">
+                <strong>{{ n.actor.username }}</strong> {{ n.text }}
+            </span>
+            <span class="notif-time">{{ n.created_at|timesince }} ago</span>
+        </a>
+        {% empty %}
+        <div class="empty-state">
+            <h3>No Notifications</h3>
+            <p>When someone interacts with you, you'll see it here.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

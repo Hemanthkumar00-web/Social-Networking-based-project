@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ location_name }} - Instagram{% endblock %}
+
+{% block content %}
+<div class="main-container" style="padding-top:24px;">
+    <div style="margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f5f5f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <h2 style="font-size:24px;">{{ location_name }}</h2>
+        </div>
+        <p style="color:#a8a8a8;font-size:14px;">{{ posts.count }} post{{ posts.count|pluralize }} &middot; {{ reels.count }} reel{{ reels.count|pluralize }}</p>
+    </div>
+
+    {% if posts %}
+    <h3 style="font-size:16px;margin-bottom:12px;">Posts</h3>
+    <div class="profile-grid" style="margin-bottom:32px;">
+        {% for post in posts %}
+        <a href="{% url 'post_detail' post.pk %}" class="profile-grid-item">
+            <img src="{{ post.image.url }}" alt="">
+            <div class="grid-overlay">
+                <span>&#10084; {{ post.likes_count }}</span>
+                <span>&#128172; {{ post.comments_count }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if reels %}
+    <h3 style="font-size:16px;margin-bottom:12px;">Reels</h3>
+    <div class="profile-grid">
+        {% for reel in reels %}
+        <a href="{% url 'reels' %}" class="profile-grid-item">
+            <video src="{{ reel.video.url }}" preload="metadata"></video>
+            <div class="grid-overlay">
+                <span>&#10084; {{ reel.likes_count }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not posts and not reels %}
+    <div class="empty-state">
+        <h3>No content at this location yet</h3>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block title %}Search - Instagram{% endblock %}
+
+{% block content %}
+<div class="main-container" style="padding-top:24px;">
+    <div style="max-width:600px;margin:0 auto;">
+        <!-- Search Input -->
+        <input type="text" id="search-page-input" placeholder="Search users, posts, reels, locations..."
+               style="width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;font-size:16px;outline:none;background:rgba(255,255,255,0.1);color:#f5f5f5;margin-bottom:16px;">
+
+        <!-- Category Tabs -->
+        <div class="search-tabs" id="search-tabs" style="display:none;">
+            <button class="search-tab active" data-cat="all">All</button>
+            <button class="search-tab" data-cat="users">Users</button>
+            <button class="search-tab" data-cat="posts">Posts</button>
+            <button class="search-tab" data-cat="reels">Reels</button>
+            <button class="search-tab" data-cat="locations">Locations</button>
+        </div>
+
+        <!-- Results -->
+        <div id="search-page-results"></div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="search-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <h3>Search</h3>
+            <p>Find users, posts, reels, and locations.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.search-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.search-tabs::-webkit-scrollbar { display: none; }
+.search-tab {
+    padding: 8px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    color: #f5f5f5;
+}
+.search-tab:hover { background: rgba(255, 255, 255, 0.15); }
+.search-tab.active {
+    background: #f5f5f5;
+    color: #000;
+    border-color: #f5f5f5;
+}
+.search-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #f5f5f5;
+    padding: 12px 0 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 8px;
+}
+.search-post-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.search-post-item img.post-thumb {
+    width: 50px;
+    height: 50px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+.search-post-info {
+    flex: 1;
+    min-width: 0;
+}
+.search-post-info .post-meta {
+    font-size: 13px;
+    color: #a8a8a8;
+}
+.search-location-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+}
+.search-location-item:hover { background: rgba(255, 255, 255, 0.08); margin: 0 -8px; padding: 12px 8px; border-radius: 8px; }
+.loc-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const input = document.getElementById('search-page-input');
+const resultsDiv = document.getElementById('search-page-results');
+const emptyDiv = document.getElementById('search-empty');
+const tabsDiv = document.getElementById('search-tabs');
+let timer;
+let currentCategory = 'all';
+let lastQuery = '';
+
+document.querySelectorAll('.search-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        currentCategory = this.dataset.cat;
+        if (lastQuery) doSearch(lastQuery, currentCategory);
+    });
+});
+
+input.addEventListener('input', function() {
+    clearTimeout(timer);
+    const q = this.value.trim();
+    lastQuery = q;
+    if (q.length < 1) {
+        resultsDiv.innerHTML = '';
+        emptyDiv.style.display = '';
+        tabsDiv.style.display = 'none';
+        return;
+    }
+    timer = setTimeout(() => doSearch(q, currentCategory), 300);
+});
+
+function doSearch(q, category) {
+    fetch('/api/search/?q=' + encodeURIComponent(q) + '&category=' + category)
+        .then(r => r.json())
+        .then(data => {
+            emptyDiv.style.display = 'none';
+            tabsDiv.style.display = 'flex';
+            let html = '';
+
+            // Users
+            if (data.users && data.users.length > 0) {
+                html += '<div class="search-section-title">Users</div>';
+                html += data.users.map(u => `
+                    <a href="/profile/${u.username}/" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);">
+                        ${u.pic
+                            ? `<img src="${u.pic}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">`
+                            : `<div class="avatar-placeholder" style="width:44px;height:44px;font-size:16px;">${u.username[0].toUpperCase()}</div>`
+                        }
+                        <div>
+                            <div style="font-weight:600;font-size:14px;">${u.username}</div>
+                            <div style="font-size:13px;color:#a8a8a8;">${u.name}</div>
+                        </div>
+                    </a>
+                `).join('');
+            }
+
+            // Posts
+            if (data.posts && data.posts.length > 0) {
+                html += '<div class="search-section-title">Posts</div>';
+                html += data.posts.map(p => `
+                    <a href="/posts/${p.id}/" class="search-post-item">
+                        <img src="${p.image}" class="post-thumb">
+                        <div class="search-post-info">
+                            <div style="font-weight:600;font-size:14px;">${p.username}</div>
+                            <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.caption || 'No caption'}</div>
+                            <div class="post-meta">
+                                ${p.location ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ' + p.location + ' &middot; ' : ''}
+                                ${p.likes} like${p.likes !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                    </a>
+                `).join('');
+            }
+
+            // Reels
+            if (data.reels && data.reels.length > 0) {
+                html += '<div class="search-section-title">Reels</div>';
+                html += data.reels.map(r => `
+                    <a href="/reels/" class="search-post-item">
+                        <div style="width:50px;height:50px;border-radius:6px;background:#000;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="5 3 19 12 5 21"/></svg>
+                        </div>
+                        <div class="search-post-info">
+                            <div style="font-weight:600;font-size:14px;">${r.username}</div>
+                            <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.caption || 'No caption'}</div>
+                            <div class="post-meta">
+                                ${r.location ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ' + r.location + ' &middot; ' : ''}
+                                ${r.likes} like${r.likes !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                    </a>
+                `).join('');
+            }
+
+            // Locations
+            if (data.locations && data.locations.length > 0) {
+                html += '<div class="search-section-title">Locations</div>';
+                html += data.locations.map(l => `
+                    <a href="/location/${encodeURIComponent(l.name)}/" class="search-location-item">
+                        <div class="loc-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f5f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:14px;">${l.name}</div>
+                            <div style="font-size:13px;color:#a8a8a8;">${l.total} post${l.total !== 1 ? 's' : ''}</div>
+                        </div>
+                    </a>
+                `).join('');
+            }
+
+            if (!html) {
+                html = '<div style="text-align:center;padding:40px 0;color:#a8a8a8;">No results found.</div>';
+            }
+
+            resultsDiv.innerHTML = html;
+        });
+}
+
+input.focus();
+</script>
+{% endblock %}

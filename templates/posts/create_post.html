@@ -1,0 +1,515 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Post - CrownX{% endblock %}
+
+{% block content %}
+<div class="main-container" style="padding-top:24px;">
+    <div class="modal-box" style="margin:0 auto;">
+        <div class="modal-header">
+            <span>Create New Post</span>
+            <a href="{% url 'feed' %}" class="modal-close">&times;</a>
+        </div>
+        <div class="modal-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Photo</label>
+                    <input type="file" name="image" accept="image/*" required id="image-input">
+                    <div id="image-preview" style="display:none;margin-top:10px;">
+                        <img id="preview-img" src="" alt="" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:cover;">
+                    </div>
+                </div>
+                <div class="form-group" style="position:relative;">
+                    <label>Caption</label>
+                    <textarea name="caption" id="caption-input" placeholder="Write a caption..." style="padding-right:40px;"></textarea>
+                    <button type="button" class="cp-emoji-toggle" onclick="toggleCpEmoji()" title="Add emoji">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                    </button>
+                    <div class="cp-emoji-picker" id="cp-emoji-picker" style="display:none;">
+                        <div class="cp-emoji-tabs" id="cp-emoji-tabs"></div>
+                        <div class="cp-emoji-grid" id="cp-emoji-grid"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" name="location" placeholder="Add location...">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                        Add Music
+                    </label>
+                    <input type="hidden" name="song_id" id="song-id-input" value="">
+                    <!-- Selected song display -->
+                    <div id="selected-song" style="display:none;margin-top:10px;padding:12px 14px;background:#1a1a1a;border:1px solid #363636;border-radius:12px;">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <img id="selected-song-cover" src="" alt="" style="width:44px;height:44px;border-radius:8px;object-fit:cover;background:#262626;">
+                            <button type="button" id="selected-song-play" onclick="toggleSelectedPreview()" style="background:none;border:none;cursor:pointer;color:#f5f5f5;display:flex;align-items:center;">
+                                <svg class="sel-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <svg class="sel-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                            </button>
+                            <div style="flex:1;min-width:0;">
+                                <div id="selected-song-title" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+                                <div id="selected-song-artist" style="font-size:11px;color:#a8a8a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+                            </div>
+                            <button type="button" onclick="clearSelectedSong()" style="background:none;border:none;cursor:pointer;color:#a8a8a8;padding:4px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <audio id="selected-song-audio" style="display:none;"></audio>
+                    </div>
+                    <!-- Browse / Upload buttons -->
+                    <div id="music-action-btns" style="display:flex;gap:10px;margin-top:10px;">
+                        <button type="button" onclick="openMusicPicker()" style="flex:1;padding:10px 16px;background:#262626;border:1px solid #363636;border-radius:10px;color:#f5f5f5;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;transition:background 0.15s;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Browse Music
+                        </button>
+                        <label style="flex:1;padding:10px 16px;background:#262626;border:1px solid #363636;border-radius:10px;color:#a8a8a8;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;transition:background 0.15s;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            Upload File
+                            <input type="file" name="music" accept="audio/*" id="music-input" style="display:none;">
+                        </label>
+                    </div>
+                    <!-- Upload preview (for custom file) -->
+                    <div id="music-preview" style="display:none;margin-top:10px;padding:10px 14px;background:#1a1a1a;border:1px solid #363636;border-radius:10px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <button type="button" id="music-play-btn" onclick="toggleMusicPreview()" style="background:none;border:none;cursor:pointer;color:#f5f5f5;display:flex;align-items:center;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            </button>
+                            <div style="flex:1;min-width:0;">
+                                <div id="music-file-name" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+                                <div style="font-size:11px;color:#a8a8a8;">Audio file</div>
+                            </div>
+                            <button type="button" onclick="removeMusicFile()" style="background:none;border:none;cursor:pointer;color:#a8a8a8;padding:4px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <audio id="music-audio-preview" style="display:none;"></audio>
+                    </div>
+                </div>
+                <div class="form-group" id="music-title-group" style="display:none;">
+                    <label>Song Name</label>
+                    <input type="text" name="music_title" id="music-title-input" placeholder="Enter song name...">
+                </div>
+                <button type="submit" class="btn-submit">Share</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.cp-emoji-toggle {
+    position: absolute;
+    right: 8px;
+    top: 32px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cp-emoji-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.cp-emoji-picker {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    width: 320px;
+    background: rgba(30, 30, 30, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    z-index: 100;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.cp-emoji-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 4px;
+}
+.cp-emoji-tabs::-webkit-scrollbar { display: none; }
+.cp-emoji-tab {
+    padding: 8px 10px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+.cp-emoji-tab:hover { opacity: 0.8; }
+.cp-emoji-tab.active { opacity: 1; border-bottom-color: #f5f5f5; }
+.cp-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    padding: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.cp-emoji-grid::-webkit-scrollbar { width: 4px; }
+.cp-emoji-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+.cp-emoji-item {
+    background: none;
+    border: none;
+    font-size: 22px;
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s;
+    text-align: center;
+    line-height: 1;
+}
+.cp-emoji-item:hover { background: rgba(255, 255, 255, 0.1); }
+</style>
+
+<!-- Music Picker Modal -->
+<div class="mp-overlay" id="music-picker-modal">
+    <div class="mp-modal">
+        <div class="mp-header">
+            <span class="mp-title">Add Music</span>
+            <button class="mp-close" onclick="closeMusicPicker()">&times;</button>
+        </div>
+        <div class="mp-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="mp-search-input" placeholder="Search songs or artists..." oninput="debounceSearch()">
+        </div>
+        <div class="mp-genres" id="mp-genres"></div>
+        <div class="mp-songs" id="mp-songs">
+            <div class="mp-loading" id="mp-loading">
+                <div class="mp-spinner"></div>
+                <span>Loading music...</span>
+            </div>
+            <div id="mp-songs-list"></div>
+            <div class="mp-empty" id="mp-empty" style="display:none;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#363636" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                <p>No songs found</p>
+            </div>
+        </div>
+    </div>
+    <audio id="mp-preview-audio" preload="none"></audio>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const cpEmojiData = {
+    'Smileys': ['😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😋','😎','😍','🥰','😘','😗','😙','😚','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥','😮','🤐','😯','😪','😫','😴','😌','😛','😜','😝','🤤','😒','😓','😔','😕','🙃','🤑','😲','🙁','😖','😞','😟','😤','😢','😭','😦','😧','😨','😩','🤯','😬','😰','😱','🥵','🥶','😳','🤪','😵','😡','😠','🤬','😷','🤒','🤕','🤢','🤮','🥴','😇','🥳','🥺','🤠','🤡','🤥','🤫','🤭','🧐','🤓'],
+    'Gestures': ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','💪','🦾','🖕','✍','🤳','💅','🦿','🦵','🦶'],
+    'Hearts': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','🫶','💑','💏','👩‍❤️‍👨','👨‍❤️‍👨','👩‍❤️‍👩'],
+    'Animals': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🪲','🪳','🕷','🦂','🐢','🐍','🦎','🦖','🐙','🦑','🐠','🐟','🐡','🐬','🦈','🐳','🐋'],
+    'Food': ['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🥑','🍆','🥔','🥕','🌽','🌶','🫑','🥒','🥬','🧄','🧅','🥜','🫘','🍞','🥐','🥖','🫓','🥨','🥯','🥞','🧇','🧀','🍖','🍗','🥩','🥓','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🫔','🥙','🧆','🥚','🍳','🥘','🍲','🫕','🥣','🥗','🍿','🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯'],
+    'Travel': ['🚗','🚕','🚌','🏎','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍','🛵','🚲','🛴','🚏','🛣','🛤','⛽','🚨','🚥','🚦','🚧','⚓','⛵','🚤','🛳','⛴','🛥','🚢','✈','🛩','🛫','🛬','🪂','💺','🚁','🚀','🏠','🏡','🏘','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛','⛪','🕌','🕍','🛕','🕋','⛩','🏔','⛰','🌋','🗻','🏕','🏖','🏜','🏝','🏞'],
+    'Objects': ['⌚','📱','💻','⌨','🖥','🖨','🖱','🖲','🕹','💽','💾','💿','📀','📷','📸','📹','🎥','🔍','🔎','🔬','🔭','📡','🕯','💡','🔦','🏮','📖','📚','✏','🖊','🖋','✒','📝','📁','📂','📅','📆','📌','📎','🔒','🔓','🔑','🗝','🔨','🪓','⛏','🛠','🗡','⚔','🔫','🏹','🛡','🪚','🔧','🪛','🔩','⚙','🗜','⚖','🦯','🔗','⛓','🪝','🧲','💊','🩹','🩺','🧬','🧪','🧫'],
+    'Symbols': ['🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔘','🔲','🔳','⬛','⬜','🟥','🟧','🟨','🟩','🟦','🟪','❗','❓','❕','❔','‼️','⁉️','💯','🔥','✨','⭐','🌟','💫','💥','💢','💨','💦','🎵','🎶','🔔','🔕','📣','📢','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','🎴','🀄','🔇','🔈','🔉','🔊']
+};
+
+const cpCategories = Object.keys(cpEmojiData);
+let cpCurrentCat = cpCategories[0];
+
+function buildCpTabs() {
+    const tabIcons = { 'Smileys': '😀', 'Gestures': '👋', 'Hearts': '❤️', 'Animals': '🐶', 'Food': '🍕', 'Travel': '🚗', 'Objects': '💡', 'Symbols': '🔥' };
+    const container = document.getElementById('cp-emoji-tabs');
+    container.innerHTML = cpCategories.map(cat =>
+        `<button type="button" class="cp-emoji-tab${cat === cpCurrentCat ? ' active' : ''}" onclick="switchCpTab('${cat}')">${tabIcons[cat] || cat[0]}</button>`
+    ).join('');
+    twemoji.parse(container, { folder: 'svg', ext: '.svg' });
+}
+
+function switchCpTab(cat) {
+    cpCurrentCat = cat;
+    document.querySelectorAll('.cp-emoji-tab').forEach((t, i) => t.classList.toggle('active', cpCategories[i] === cat));
+    renderCpGrid(cat);
+}
+
+function renderCpGrid(cat) {
+    const grid = document.getElementById('cp-emoji-grid');
+    grid.innerHTML = cpEmojiData[cat].map(e =>
+        `<button type="button" class="cp-emoji-item" onclick="insertCpEmoji('${e}')">${e}</button>`
+    ).join('');
+    twemoji.parse(grid, { folder: 'svg', ext: '.svg' });
+}
+
+function insertCpEmoji(emoji) {
+    const input = document.getElementById('caption-input');
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const val = input.value;
+    input.value = val.slice(0, start) + emoji + val.slice(end);
+    const pos = start + emoji.length;
+    input.setSelectionRange(pos, pos);
+    input.focus();
+}
+
+function toggleCpEmoji() {
+    const picker = document.getElementById('cp-emoji-picker');
+    if (picker.style.display === 'none') {
+        picker.style.display = 'block';
+        if (!document.getElementById('cp-emoji-tabs').innerHTML) {
+            buildCpTabs();
+            renderCpGrid(cpCurrentCat);
+        }
+    } else {
+        picker.style.display = 'none';
+    }
+}
+
+document.addEventListener('click', function(e) {
+    const picker = document.getElementById('cp-emoji-picker');
+    if (picker.style.display !== 'none' && !e.target.closest('.cp-emoji-picker') && !e.target.closest('.cp-emoji-toggle')) {
+        picker.style.display = 'none';
+    }
+});
+
+document.getElementById('music-input').addEventListener('change', function() {
+    const file = this.files[0];
+    const preview = document.getElementById('music-preview');
+    const titleGroup = document.getElementById('music-title-group');
+    if (file) {
+        clearSelectedSong();
+        document.getElementById('music-file-name').textContent = file.name;
+        document.getElementById('music-audio-preview').src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+        titleGroup.style.display = 'block';
+        document.getElementById('music-action-btns').style.display = 'none';
+        const name = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+        document.getElementById('music-title-input').value = name;
+    } else {
+        preview.style.display = 'none';
+        titleGroup.style.display = 'none';
+    }
+});
+
+let musicPlaying = false;
+function toggleMusicPreview() {
+    const audio = document.getElementById('music-audio-preview');
+    const btn = document.getElementById('music-play-btn');
+    if (musicPlaying) {
+        audio.pause();
+        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+    } else {
+        audio.play();
+        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    }
+    musicPlaying = !musicPlaying;
+}
+
+function removeMusicFile() {
+    document.getElementById('music-input').value = '';
+    document.getElementById('music-preview').style.display = 'none';
+    document.getElementById('music-title-group').style.display = 'none';
+    document.getElementById('music-action-btns').style.display = 'flex';
+    const audio = document.getElementById('music-audio-preview');
+    audio.pause();
+    audio.src = '';
+    musicPlaying = false;
+}
+
+// ── Instagram-style Music Picker ──
+let mpGenres = [];
+let mpActiveGenre = '';
+let mpPreviewPlaying = null;
+let mpSearchTimer = null;
+let selPlaying = false;
+
+function openMusicPicker() {
+    document.getElementById('music-picker-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('mp-search-input').value = '';
+    mpActiveGenre = '';
+    loadSongs();
+}
+
+function closeMusicPicker() {
+    document.getElementById('music-picker-modal').classList.remove('active');
+    document.body.style.overflow = '';
+    stopMpPreview();
+}
+
+function loadSongs(q, genre) {
+    const list = document.getElementById('mp-songs-list');
+    const loading = document.getElementById('mp-loading');
+    const empty = document.getElementById('mp-empty');
+    list.innerHTML = '';
+    loading.style.display = 'flex';
+    empty.style.display = 'none';
+
+    let url = '/songs/search/?';
+    if (q) url += 'q=' + encodeURIComponent(q) + '&';
+    if (genre) url += 'genre=' + encodeURIComponent(genre);
+
+    fetch(url).then(r => r.json()).then(data => {
+        loading.style.display = 'none';
+        if (mpGenres.length === 0 && data.genres) {
+            mpGenres = data.genres;
+            renderGenres();
+        }
+        if (data.songs.length === 0) {
+            empty.style.display = 'flex';
+            return;
+        }
+        list.innerHTML = data.songs.map(s => `
+            <div class="mp-song-item" data-id="${s.id}" data-audio="${s.audio}" data-title="${s.title.replace(/"/g,'&quot;')}" data-artist="${s.artist.replace(/"/g,'&quot;')}" data-cover="${s.cover}">
+                <div class="mp-song-cover" onclick="toggleMpPreview(${s.id})">
+                    ${s.cover ? '<img src="' + s.cover + '" alt="">' : '<div class="mp-song-cover-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>'}
+                    <div class="mp-song-play-overlay" id="mp-play-${s.id}">
+                        <svg class="mp-play-i" width="18" height="18" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <svg class="mp-pause-i" width="18" height="18" viewBox="0 0 24 24" fill="#fff" style="display:none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                    </div>
+                </div>
+                <div class="mp-song-info">
+                    <div class="mp-song-name">${s.title}</div>
+                    <div class="mp-song-artist">${s.artist}</div>
+                </div>
+                <button class="mp-song-use" onclick="selectSong(${s.id})">Use</button>
+            </div>
+        `).join('');
+    });
+}
+
+function renderGenres() {
+    const el = document.getElementById('mp-genres');
+    el.innerHTML = '<button class="mp-genre-btn active" onclick="filterGenre(\'\', this)">All</button>' +
+        mpGenres.map(g => `<button class="mp-genre-btn" onclick="filterGenre('${g.value}', this)">${g.label}</button>`).join('');
+}
+
+function filterGenre(genre, btn) {
+    mpActiveGenre = genre;
+    document.querySelectorAll('.mp-genre-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    stopMpPreview();
+    loadSongs(document.getElementById('mp-search-input').value.trim(), genre);
+}
+
+function debounceSearch() {
+    clearTimeout(mpSearchTimer);
+    mpSearchTimer = setTimeout(() => {
+        stopMpPreview();
+        loadSongs(document.getElementById('mp-search-input').value.trim(), mpActiveGenre);
+    }, 300);
+}
+
+function toggleMpPreview(songId) {
+    const audio = document.getElementById('mp-preview-audio');
+    const item = document.querySelector('.mp-song-item[data-id="' + songId + '"]');
+    if (mpPreviewPlaying === songId) {
+        audio.pause();
+        resetAllPlayIcons();
+        mpPreviewPlaying = null;
+        return;
+    }
+    resetAllPlayIcons();
+    audio.src = item.dataset.audio;
+    audio.play();
+    mpPreviewPlaying = songId;
+    const overlay = document.getElementById('mp-play-' + songId);
+    overlay.querySelector('.mp-play-i').style.display = 'none';
+    overlay.querySelector('.mp-pause-i').style.display = '';
+    overlay.classList.add('active');
+    audio.onended = () => { resetAllPlayIcons(); mpPreviewPlaying = null; };
+}
+
+function resetAllPlayIcons() {
+    document.querySelectorAll('.mp-song-play-overlay').forEach(o => {
+        o.querySelector('.mp-play-i').style.display = '';
+        o.querySelector('.mp-pause-i').style.display = 'none';
+        o.classList.remove('active');
+    });
+}
+
+function stopMpPreview() {
+    const audio = document.getElementById('mp-preview-audio');
+    audio.pause();
+    audio.src = '';
+    resetAllPlayIcons();
+    mpPreviewPlaying = null;
+}
+
+function selectSong(songId) {
+    const item = document.querySelector('.mp-song-item[data-id="' + songId + '"]');
+    if (!item) return;
+    stopMpPreview();
+    closeMusicPicker();
+    removeMusicFile();
+
+    document.getElementById('song-id-input').value = songId;
+    document.getElementById('selected-song-title').textContent = item.dataset.title;
+    document.getElementById('selected-song-artist').textContent = item.dataset.artist;
+    const cover = document.getElementById('selected-song-cover');
+    if (item.dataset.cover) {
+        cover.src = item.dataset.cover;
+        cover.style.display = '';
+    } else {
+        cover.style.display = 'none';
+    }
+    document.getElementById('selected-song-audio').src = item.dataset.audio;
+    document.getElementById('selected-song').style.display = 'block';
+    document.getElementById('music-action-btns').style.display = 'none';
+}
+
+function clearSelectedSong() {
+    document.getElementById('song-id-input').value = '';
+    document.getElementById('selected-song').style.display = 'none';
+    document.getElementById('music-action-btns').style.display = 'flex';
+    const audio = document.getElementById('selected-song-audio');
+    audio.pause();
+    audio.src = '';
+    selPlaying = false;
+    document.querySelector('#selected-song-play .sel-play').style.display = '';
+    document.querySelector('#selected-song-play .sel-pause').style.display = 'none';
+}
+
+function toggleSelectedPreview() {
+    const audio = document.getElementById('selected-song-audio');
+    if (selPlaying) {
+        audio.pause();
+        document.querySelector('#selected-song-play .sel-play').style.display = '';
+        document.querySelector('#selected-song-play .sel-pause').style.display = 'none';
+    } else {
+        audio.play();
+        document.querySelector('#selected-song-play .sel-play').style.display = 'none';
+        document.querySelector('#selected-song-play .sel-pause').style.display = '';
+    }
+    selPlaying = !selPlaying;
+    audio.onended = () => {
+        selPlaying = false;
+        document.querySelector('#selected-song-play .sel-play').style.display = '';
+        document.querySelector('#selected-song-play .sel-pause').style.display = 'none';
+    };
+}
+
+document.getElementById('music-picker-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeMusicPicker();
+});
+
+document.getElementById('image-input').addEventListener('change', function() {
+    const file = this.files[0];
+    const preview = document.getElementById('image-preview');
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-img').src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

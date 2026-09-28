@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload Reel - Instagram{% endblock %}
+
+{% block content %}
+<div class="main-container" style="padding-top:24px;">
+    <div class="modal-box" style="margin:0 auto;">
+        <div class="modal-header">
+            <span>Upload Reel</span>
+            <a href="{% url 'reels' %}" class="modal-close">&times;</a>
+        </div>
+        <div class="modal-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Video</label>
+                    <input type="file" name="video" accept="video/*" required>
+                </div>
+                <div class="form-group">
+                    <label>Caption</label>
+                    <textarea name="caption" placeholder="Write a caption..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" name="location" placeholder="Add location...">
+                </div>
+                <button type="submit" class="btn-submit">Share Reel</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

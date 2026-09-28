@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Messages - Instagram{% endblock %}
+
+{% block content %}
+<div class="dm-layout">
+    <!-- Threads Sidebar -->
+    <div class="dm-sidebar">
+        <div class="dm-sidebar-header">
+            <a href="{% url 'feed' %}" class="dm-back-btn" title="Back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </a>
+            <div class="dm-sidebar-title">
+                <h2>{{ request.user.username }}</h2>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <a href="{% url 'new_message' %}" class="dm-compose-btn" title="New message">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </a>
+        </div>
+        <div class="dm-tab-bar">
+            <button class="dm-tab active">Primary</button>
+            <button class="dm-tab">General</button>
+        </div>
+        <div class="dm-thread-list">
+            {% for u in thread_users %}
+            <a href="{% url 'chat' u.username %}" class="dm-thread">
+                <div class="dm-thread-avatar">
+                    {% if u.profile.profile_pic %}
+                        <img src="{{ u.profile.profile_pic.url }}" alt="">
+                    {% else %}
+                        <div class="avatar-placeholder" style="width:56px;height:56px;font-size:20px;">{{ u.username|first|upper }}</div>
+                    {% endif %}
+                    <span class="dm-online-dot"></span>
+                </div>
+                <div class="dm-thread-body">
+                    <span class="dm-thread-name">{{ u.username }}</span>
+                    <span class="dm-thread-preview">
+                        {% with msg=last_messages %}
+                            {% for uid, m in msg.items %}
+                                {% if uid == u.id %}
+                                    {% if m.sender == request.user %}You: {% endif %}{{ m.body|truncatechars:25 }} · {{ m.created_at|timesince }} ago
+                                {% endif %}
+                            {% endfor %}
+                        {% endwith %}
+                    </span>
+                </div>
+                {% if u.id in unread_counts %}
+                    {% with count=unread_counts %}
+                        {% for uid, c in count.items %}
+                            {% if uid == u.id and c > 0 %}
+                                <span class="dm-unread-badge">{{ c }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                {% endif %}
+            </a>
+            {% empty %}
+            <div class="dm-empty">
+                <p>No messages yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- Right Panel - Placeholder -->
+    <div class="dm-panel dm-panel-empty">
+        <div class="dm-panel-welcome">
+            <div class="dm-welcome-icon">
+                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#f5f5f5" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </div>
+            <h2>Your messages</h2>
+            <p>Send a message to start a chat.</p>
+            <a href="{% url 'new_message' %}" class="dm-send-first-btn">Send message</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

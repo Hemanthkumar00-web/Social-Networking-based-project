@@ -1,0 +1,578 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profile_user.username }} - CrownX{% endblock %}
+
+{% block content %}
+<div class="p-container">
+    <!-- Profile Header -->
+    <div class="p-header">
+        <div class="p-avatar-col">
+            <div class="p-avatar-ring">
+                <div class="p-avatar">
+                    {% if profile_user.profile.profile_pic %}
+                        <img src="{{ profile_user.profile.profile_pic.url }}" alt="">
+                    {% else %}
+                        <div class="avatar-placeholder" style="width:100%;height:100%;font-size:36px;">{{ profile_user.username|first|upper }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="p-info-col">
+            <!-- Row 1: Username + Actions -->
+            <div class="p-top-row">
+                <div class="p-name-row">
+                    <h1 class="p-username">{{ profile_user.username }}</h1>
+                    {% if profile_user.profile.is_verified %}
+                    <svg class="p-verified-badge" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" fill="#0095f6"/>
+                        <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {% endif %}
+                </div>
+                <div class="p-action-btns">
+                    {% if profile_user == request.user %}
+                        <a href="{% url 'edit_profile' %}" class="p-btn p-btn-secondary">Edit profile</a>
+                        <a href="{% url 'create_post' %}" class="p-btn p-btn-primary">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            New Post
+                        </a>
+                        <a href="{% url 'settings' %}" class="p-btn p-btn-icon" title="Settings">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        </a>
+                    {% else %}
+                        {% if is_following %}
+                        <button class="p-btn p-btn-following" id="profile-follow-btn" data-username="{{ profile_user.username }}" data-following="true" onclick="showUnfollowModal('{{ profile_user.username }}', '{% if profile_user.profile.profile_pic %}{{ profile_user.profile.profile_pic.url }}{% endif %}', '{{ profile_user.username|first|upper }}')">
+                            <span class="follow-label">Following</span>
+                        </button>
+                        {% else %}
+                        <button class="p-btn p-btn-primary" id="profile-follow-btn" data-username="{{ profile_user.username }}" data-following="false" onclick="doFollow('{{ profile_user.username }}', this)">
+                            {% if follows_you %}Follow Back{% else %}Follow{% endif %}
+                        </button>
+                        {% endif %}
+                        <a href="{% url 'chat' profile_user.username %}" class="p-btn p-btn-secondary">Message</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Row 2: Stats -->
+            <div class="p-stats-row">
+                <div class="p-stat"><span class="p-stat-num">{{ posts.count }}</span> posts</div>
+                <a href="{% url 'followers_list' profile_user.username %}" class="p-stat"><span class="p-stat-num" id="followers-count">{{ profile_user.profile.followers_count }}</span> followers</a>
+                <a href="{% url 'following_list' profile_user.username %}" class="p-stat"><span class="p-stat-num" id="following-count">{{ profile_user.profile.following_count }}</span> following</a>
+            </div>
+
+            <!-- Row 3: Name + Bio -->
+            <div class="p-bio-section">
+                {% if profile_user.first_name or profile_user.last_name %}
+                    <div class="p-fullname">{{ profile_user.first_name }} {{ profile_user.last_name }}</div>
+                {% endif %}
+                {% if profile_user.profile.bio %}
+                    <div class="p-bio">{{ profile_user.profile.bio|linebreaksbr }}</div>
+                {% endif %}
+                {% if not profile_user == request.user and follows_you %}
+                    <span class="p-follows-badge">Follows you</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile: Stats row (shown below header on small screens) -->
+    <div class="p-stats-mobile">
+        <div class="p-stat-m"><span class="p-stat-num">{{ posts.count }}</span><span>posts</span></div>
+        <a href="{% url 'followers_list' profile_user.username %}" class="p-stat-m"><span class="p-stat-num">{{ profile_user.profile.followers_count }}</span><span>followers</span></a>
+        <a href="{% url 'following_list' profile_user.username %}" class="p-stat-m"><span class="p-stat-num">{{ profile_user.profile.following_count }}</span><span>following</span></a>
+    </div>
+
+    <!-- Highlights Bar -->
+    <div class="p-highlights">
+        {% if profile_user == request.user %}
+        <div class="highlight-item" onclick="openCreateHighlight()">
+            <div class="highlight-circle add-highlight">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f5f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </div>
+            <span>New</span>
+        </div>
+        {% endif %}
+        {% for hl in highlights %}
+        <div class="highlight-item" onclick="viewHighlight({{ hl.pk }})">
+            <div class="highlight-circle">
+                {% if hl.cover_url %}
+                    <img src="{{ hl.cover_url }}" alt="{{ hl.title }}">
+                {% else %}
+                    <div class="avatar-placeholder" style="width:100%;height:100%;font-size:20px;">{{ hl.title|first|upper }}</div>
+                {% endif %}
+            </div>
+            <span>{{ hl.title }}</span>
+            {% if profile_user == request.user %}
+            <button class="highlight-edit-btn" onclick="event.stopPropagation(); openEditHighlight({{ hl.pk }}, '{{ hl.title|escapejs }}')" title="Edit">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            </button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Tabs -->
+    <div class="p-tabs">
+        <button class="p-tab active" onclick="showTab('posts', this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Posts
+        </button>
+        <button class="p-tab" onclick="showTab('reels', this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><polygon points="10 8 16 12 10 16" fill="currentColor" stroke="none"/></svg>
+            Reels
+        </button>
+        {% if profile_user == request.user %}
+        <button class="p-tab" onclick="showTab('saved', this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            Saved
+        </button>
+        {% endif %}
+        <button class="p-tab" onclick="showTab('tagged', this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Tagged
+        </button>
+    </div>
+
+    <!-- Posts Grid -->
+    <div id="tab-posts" class="p-grid">
+        {% for post in posts %}
+        <a href="{% url 'post_detail' post.pk %}" class="p-grid-item">
+            <img src="{{ post.image.url }}" alt="">
+            <div class="p-grid-overlay">
+                <div class="p-grid-stats">
+                    <span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> {{ post.likes_count }}</span>
+                    <span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> {{ post.comments_count }}</span>
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="p-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <h3>No Posts Yet</h3>
+            {% if profile_user == request.user %}
+            <p>Share your first photo!</p>
+            <a href="{% url 'create_post' %}" class="p-btn p-btn-primary" style="margin-top:16px;display:inline-flex;">Create Post</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Reels Grid -->
+    <div id="tab-reels" class="p-grid" style="display:none;">
+        {% for reel in reels %}
+        <div class="p-grid-item" style="position:relative;">
+            <a href="{% url 'reels' %}" style="display:block;width:100%;height:100%;">
+                <video src="{{ reel.video.url }}" preload="metadata"></video>
+                <div class="p-grid-overlay">
+                    <div class="p-grid-stats">
+                        <span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> {{ reel.likes_count }}</span>
+                    </div>
+                </div>
+            </a>
+            {% if profile_user == request.user %}
+            <button class="reel-delete-btn" onclick="showDeleteReelModal({{ reel.pk }})" title="Delete reel">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="p-empty">
+            <h3>No Reels Yet</h3>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if profile_user == request.user %}
+    <!-- Saved Grid -->
+    <div id="tab-saved" class="p-grid" style="display:none;">
+        {% for post in saved_posts %}
+        <a href="{% url 'post_detail' post.pk %}" class="p-grid-item">
+            <img src="{{ post.image.url }}" alt="">
+            <div class="p-grid-overlay">
+                <div class="p-grid-stats">
+                    <span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> {{ post.likes_count }}</span>
+                    <span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> {{ post.comments_count }}</span>
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="p-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <h3>No Saved Posts</h3>
+            <p>Save photos and videos that you want to see again.</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Tagged Grid -->
+    <div id="tab-tagged" class="p-grid" style="display:none;">
+        <div class="p-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <h3>No Tagged Posts</h3>
+            <p>When people tag {{ profile_user.username }}, it'll show up here.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Create Highlight Modal -->
+<div class="modal-overlay" id="create-highlight-modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>New Highlight</span>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('active')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="hl-title" placeholder="Highlight name" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>Cover Image (optional)</label>
+                <input type="file" id="hl-cover" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label>Select Stories</label>
+                <div id="hl-stories-grid" class="hl-stories-grid">
+                    <div style="text-align:center;color:#a8a8a8;padding:20px;">Loading stories...</div>
+                </div>
+            </div>
+            <button class="btn-submit" onclick="submitCreateHighlight()">Create Highlight</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Highlight Modal -->
+<div class="modal-overlay" id="edit-highlight-modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>Edit Highlight</span>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('active')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-hl-id">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="edit-hl-title" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>Cover Image (optional)</label>
+                <input type="file" id="edit-hl-cover" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label>Select Stories</label>
+                <div id="edit-hl-stories-grid" class="hl-stories-grid">
+                    <div style="text-align:center;color:#a8a8a8;padding:20px;">Loading stories...</div>
+                </div>
+            </div>
+            <div style="display:flex;gap:12px;">
+                <button class="btn-submit" style="flex:1;" onclick="submitEditHighlight()">Save Changes</button>
+                <button class="btn-submit" style="flex:0 0 auto;background:#ed4956;" onclick="deleteHighlight()">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Highlight Viewer -->
+<div class="hl-overlay" id="highlight-viewer">
+    <div class="hl-card">
+        <div class="hl-progress" id="hl-progress"></div>
+        <div class="hl-header">
+            <img id="hl-viewer-pic" src="" alt="">
+            <div class="hl-header-info">
+                <span class="hl-title" id="hl-viewer-title"></span>
+                <span class="hl-time" id="hl-viewer-time"></span>
+            </div>
+            <button class="hl-close-btn" onclick="closeHighlightViewer()">&times;</button>
+        </div>
+        <img class="hl-image" id="hl-viewer-image" src="" alt="">
+        <div class="hl-tap-left" id="hl-tap-left"></div>
+        <div class="hl-tap-right" id="hl-tap-right"></div>
+    </div>
+</div>
+
+<!-- Delete Reel Confirmation Modal -->
+<div class="modal-overlay" id="delete-reel-modal">
+    <div class="modal-box" style="max-width:400px;text-align:center;">
+        <div style="padding:24px 16px 0;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ed4956" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            <p style="font-size:16px;font-weight:600;margin-bottom:4px;">Delete Reel?</p>
+            <p style="font-size:13px;color:#a8a8a8;margin-bottom:0;">This can't be undone and it will be removed from your profile.</p>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:16px;">
+            <button class="unfollow-modal-btn danger" id="delete-reel-confirm-btn" onclick="confirmDeleteReel()">Delete</button>
+            <button class="unfollow-modal-btn" onclick="document.getElementById('delete-reel-modal').classList.remove('active')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Unfollow Confirmation Modal -->
+<div class="modal-overlay" id="unfollow-modal">
+    <div class="modal-box" style="max-width:400px;text-align:center;">
+        <div style="padding:24px 16px 0;">
+            <div id="unfollow-modal-pic" style="margin:0 auto 16px;"></div>
+            <p style="font-size:14px;margin-bottom:4px;">Unfollow <strong id="unfollow-modal-username"></strong>?</p>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:16px;">
+            <button class="unfollow-modal-btn danger" id="unfollow-confirm-btn" onclick="confirmUnfollow()">Unfollow</button>
+            <button class="unfollow-modal-btn" onclick="document.getElementById('unfollow-modal').classList.remove('active')">Cancel</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showTab(tab, el) {
+    ['posts', 'reels', 'saved', 'tagged'].forEach(t => {
+        const panel = document.getElementById('tab-' + t);
+        if (panel) panel.style.display = t === tab ? 'grid' : 'none';
+    });
+    document.querySelectorAll('.p-tab').forEach(a => a.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+
+let deleteReelId = null;
+function showDeleteReelModal(reelId) {
+    deleteReelId = reelId;
+    document.getElementById('delete-reel-modal').classList.add('active');
+}
+function confirmDeleteReel() {
+    if (!deleteReelId) return;
+    document.getElementById('delete-reel-modal').classList.remove('active');
+    fetch('/reels/' + deleteReelId + '/delete/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (data.ok) location.reload();
+    });
+}
+
+let unfollowTarget = '';
+
+function doFollow(username, btn) {
+    fetch('/profile/' + username + '/follow/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        if (data.following) {
+            btn.className = 'p-btn p-btn-following';
+            btn.dataset.following = 'true';
+            btn.innerHTML = '<span class="follow-label">Following</span>';
+            btn.onclick = function() {
+                showUnfollowModal(username, btn.dataset.pic || '', username[0].toUpperCase());
+            };
+        } else {
+            btn.className = 'p-btn p-btn-primary';
+            btn.dataset.following = 'false';
+            btn.innerHTML = data.follows_you ? 'Follow Back' : 'Follow';
+            btn.onclick = function() { doFollow(username, btn); };
+        }
+        const fc = document.getElementById('followers-count');
+        if (fc) fc.textContent = data.followers_count;
+    });
+}
+
+function showUnfollowModal(username, pic, initial) {
+    unfollowTarget = username;
+    document.getElementById('unfollow-modal-username').textContent = '@' + username;
+    const picDiv = document.getElementById('unfollow-modal-pic');
+    if (pic) {
+        picDiv.innerHTML = '<img src="' + pic + '" style="width:90px;height:90px;border-radius:50%;object-fit:cover;">';
+    } else {
+        picDiv.innerHTML = '<div class="avatar-placeholder" style="width:90px;height:90px;font-size:32px;margin:0 auto;">' + initial + '</div>';
+    }
+    document.getElementById('unfollow-modal').classList.add('active');
+}
+
+function confirmUnfollow() {
+    document.getElementById('unfollow-modal').classList.remove('active');
+    fetch('/profile/' + unfollowTarget + '/follow/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        const btn = document.getElementById('profile-follow-btn');
+        if (btn) {
+            btn.className = 'p-btn p-btn-primary';
+            btn.dataset.following = 'false';
+            btn.innerHTML = data.follows_you ? 'Follow Back' : 'Follow';
+            btn.onclick = function() { doFollow(unfollowTarget, btn); };
+        }
+        const fc = document.getElementById('followers-count');
+        if (fc) fc.textContent = data.followers_count;
+    });
+}
+
+function loadStoriesGrid(containerId, selectedIds) {
+    const grid = document.getElementById(containerId);
+    fetch('/stories/my/')
+        .then(r => r.json())
+        .then(data => {
+            if (data.stories.length === 0) {
+                grid.innerHTML = '<div style="text-align:center;color:#a8a8a8;padding:20px;">No stories yet. Create stories first to add them to highlights.</div>';
+                return;
+            }
+            grid.innerHTML = data.stories.map(s => `
+                <label class="hl-story-item ${selectedIds && selectedIds.includes(s.id) ? 'selected' : ''}">
+                    <input type="checkbox" name="stories" value="${s.id}" ${selectedIds && selectedIds.includes(s.id) ? 'checked' : ''} style="display:none;">
+                    <img src="${s.image}" alt="">
+                    <div class="hl-story-check">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20 6L9 17l-5-5"/></svg>
+                    </div>
+                    <span class="hl-story-date">${s.time}</span>
+                </label>
+            `).join('');
+            grid.querySelectorAll('.hl-story-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const cb = this.querySelector('input');
+                    cb.checked = !cb.checked;
+                    this.classList.toggle('selected', cb.checked);
+                });
+            });
+        });
+}
+
+function openCreateHighlight() {
+    document.getElementById('hl-title').value = '';
+    document.getElementById('hl-cover').value = '';
+    loadStoriesGrid('hl-stories-grid');
+    document.getElementById('create-highlight-modal').classList.add('active');
+}
+
+function submitCreateHighlight() {
+    const title = document.getElementById('hl-title').value.trim();
+    if (!title) { alert('Please enter a title'); return; }
+    const fd = new FormData();
+    fd.append('title', title);
+    const cover = document.getElementById('hl-cover').files[0];
+    if (cover) fd.append('cover', cover);
+    document.querySelectorAll('#hl-stories-grid input[name="stories"]:checked').forEach(cb => {
+        fd.append('stories', cb.value);
+    });
+    fetch('/highlights/create/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')},
+        body: fd
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            document.getElementById('create-highlight-modal').classList.remove('active');
+            location.reload();
+        }
+    });
+}
+
+function openEditHighlight(hlId, title) {
+    document.getElementById('edit-hl-id').value = hlId;
+    document.getElementById('edit-hl-title').value = title;
+    document.getElementById('edit-hl-cover').value = '';
+    loadStoriesGrid('edit-hl-stories-grid');
+    document.getElementById('edit-highlight-modal').classList.add('active');
+}
+
+function submitEditHighlight() {
+    const hlId = document.getElementById('edit-hl-id').value;
+    const title = document.getElementById('edit-hl-title').value.trim();
+    if (!title) { alert('Please enter a title'); return; }
+    const fd = new FormData();
+    fd.append('title', title);
+    const cover = document.getElementById('edit-hl-cover').files[0];
+    if (cover) fd.append('cover', cover);
+    document.querySelectorAll('#edit-hl-stories-grid input[name="stories"]:checked').forEach(cb => {
+        fd.append('stories', cb.value);
+    });
+    fetch('/highlights/' + hlId + '/edit/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')},
+        body: fd
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            document.getElementById('edit-highlight-modal').classList.remove('active');
+            location.reload();
+        }
+    });
+}
+
+function deleteHighlight() {
+    const hlId = document.getElementById('edit-hl-id').value;
+    if (!confirm('Delete this highlight?')) return;
+    fetch('/highlights/' + hlId + '/delete/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            document.getElementById('edit-highlight-modal').classList.remove('active');
+            location.reload();
+        }
+    });
+}
+
+let hlTimer = null;
+let hlStories = [];
+let hlIdx = 0;
+const hlDuration = 5000;
+
+function viewHighlight(hlId) {
+    fetch('/highlights/' + hlId + '/stories/')
+        .then(r => r.json())
+        .then(data => {
+            if (data.stories.length === 0) { alert('This highlight has no stories.'); return; }
+            hlStories = data.stories;
+            hlIdx = 0;
+            const viewer = document.getElementById('highlight-viewer');
+            viewer.classList.add('active');
+            document.getElementById('hl-viewer-title').textContent = data.title;
+            document.getElementById('hl-viewer-pic').src = data.pic || '';
+            showHlSlide(0);
+        });
+}
+
+function showHlSlide(idx) {
+    clearTimeout(hlTimer);
+    hlIdx = idx;
+    document.getElementById('hl-viewer-image').src = hlStories[idx].image;
+    document.getElementById('hl-viewer-time').textContent = hlStories[idx].time;
+    const progress = document.getElementById('hl-progress');
+    progress.innerHTML = hlStories.map((_, i) =>
+        '<div class="hl-bar ' + (i < idx ? 'filled' : '') + '"><div class="hl-bar-fill"></div></div>'
+    ).join('');
+    const activeBar = progress.children[idx];
+    if (activeBar) {
+        const fill = activeBar.querySelector('.hl-bar-fill');
+        requestAnimationFrame(() => {
+            fill.style.transition = 'width ' + hlDuration + 'ms linear';
+            fill.style.width = '100%';
+        });
+    }
+    hlTimer = setTimeout(() => {
+        if (hlIdx + 1 < hlStories.length) showHlSlide(hlIdx + 1);
+        else closeHighlightViewer();
+    }, hlDuration);
+}
+
+function hlNav(dir) {
+    const next = hlIdx + dir;
+    if (next < 0 || next >= hlStories.length) { closeHighlightViewer(); return; }
+    showHlSlide(next);
+}
+
+function closeHighlightViewer() {
+    clearTimeout(hlTimer);
+    hlStories = [];
+    document.getElementById('highlight-viewer').classList.remove('active');
+}
+
+document.getElementById('hl-tap-left')?.addEventListener('click', () => hlNav(-1));
+document.getElementById('hl-tap-right')?.addEventListener('click', () => hlNav(1));
+document.getElementById('highlight-viewer')?.addEventListener('click', function(e) {
+    if (e.target === this) closeHighlightViewer();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - {{ profile_user.username }}{% endblock %}
+
+{% block content %}
+<div class="main-container" style="padding-top:24px;">
+    <div class="modal-box" style="margin:0 auto;">
+        <div class="modal-header">
+            <span>{{ title }}</span>
+            <a href="{% url 'profile' profile_user.username %}" class="modal-close">&times;</a>
+        </div>
+        <div style="max-height:500px;overflow-y:auto;">
+            {% for u in users_list %}
+            <div class="user-list-item" id="user-row-{{ u.username }}">
+                <a href="{% url 'profile' u.username %}">
+                    {% if u.profile.profile_pic %}
+                        <img src="{{ u.profile.profile_pic.url }}" alt="" class="user-list-pic">
+                    {% else %}
+                        <div class="avatar-placeholder" style="width:44px;height:44px;font-size:16px;">{{ u.username|first|upper }}</div>
+                    {% endif %}
+                </a>
+                <div style="flex:1;min-width:0;">
+                    <a href="{% url 'profile' u.username %}" style="font-weight:600;font-size:14px;display:block;">{{ u.username }}</a>
+                    <div style="font-size:13px;color:#a8a8a8;display:flex;align-items:center;gap:6px;">
+                        {{ u.first_name }} {{ u.last_name }}
+                        {% if u != request.user %}
+                            {% if request.user in u.profile.followers.all %}
+                                <span class="follows-you-badge-sm">Follows you</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% if u != request.user %}
+                    {% if request.user in u.profile.followers.all %}
+                    <button class="btn-following btn-sm" data-username="{{ u.username }}" data-following="true"
+                        onclick="toggleFollowList('{{ u.username }}', this)">
+                        <span class="follow-label">Following</span>
+                    </button>
+                    {% else %}
+                    <button class="btn-follow btn-sm" data-username="{{ u.username }}" data-following="false"
+                        onclick="toggleFollowList('{{ u.username }}', this)">
+                        Follow
+                    </button>
+                    {% endif %}
+                    {% if is_own and title == 'Followers' %}
+                    <button class="btn-remove-follower" onclick="removeFollower('{{ u.username }}', this)" title="Remove follower">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <p>No {{ title|lower }} yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Unfollow Confirmation Modal -->
+<div class="modal-overlay" id="unfollow-modal">
+    <div class="modal-box" style="max-width:400px;text-align:center;">
+        <div style="padding:24px 16px 0;">
+            <p style="font-size:14px;">Unfollow <strong id="unfollow-modal-username"></strong>?</p>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:16px;">
+            <button class="unfollow-modal-btn danger" onclick="confirmUnfollowList()">Unfollow</button>
+            <button class="unfollow-modal-btn" onclick="document.getElementById('unfollow-modal').classList.remove('active')">Cancel</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+
+let unfollowBtn = null;
+let unfollowUser = '';
+
+function toggleFollowList(username, btn) {
+    if (btn.dataset.following === 'true') {
+        unfollowBtn = btn;
+        unfollowUser = username;
+        document.getElementById('unfollow-modal-username').textContent = '@' + username;
+        document.getElementById('unfollow-modal').classList.add('active');
+        return;
+    }
+    fetch('/profile/' + username + '/follow/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        updateFollowBtn(btn, data);
+    });
+}
+
+function confirmUnfollowList() {
+    document.getElementById('unfollow-modal').classList.remove('active');
+    fetch('/profile/' + unfollowUser + '/follow/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        updateFollowBtn(unfollowBtn, data);
+    });
+}
+
+function updateFollowBtn(btn, data) {
+    if (data.following) {
+        btn.className = btn.className.replace('btn-follow', 'btn-following');
+        btn.dataset.following = 'true';
+        btn.innerHTML = '<span class="follow-label">Following</span>';
+    } else {
+        btn.className = btn.className.replace('btn-following', 'btn-follow');
+        btn.dataset.following = 'false';
+        btn.textContent = data.follows_you ? 'Follow Back' : 'Follow';
+    }
+}
+
+function removeFollower(username, btn) {
+    if (!confirm('Remove ' + username + ' from your followers?')) return;
+    fetch('/profile/' + username + '/remove-follower/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            const row = document.getElementById('user-row-' + username);
+            if (row) row.remove();
+        }
+    });
+}
+</script>
+{% endblock %}

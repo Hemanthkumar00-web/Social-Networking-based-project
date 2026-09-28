@@ -1,0 +1,598 @@
+{% extends 'base.html' %}
+
+{% block title %}Reels - Instagram{% endblock %}
+
+{% block content %}
+<!-- Blurred background video -->
+<div class="reel-bg-layer" id="reel-bg-layer">
+    <video class="reel-bg-video" id="reel-bg-video" muted loop playsinline></video>
+    <div class="reel-bg-overlay"></div>
+</div>
+
+<div class="reels-viewport">
+    {% for reel in reels %}
+    <div class="reel-slide" id="reel-{{ reel.pk }}" data-video-src="{{ reel.video.url }}" data-owner="{% if reel.user == request.user %}1{% else %}0{% endif %}">
+        <video class="reel-video" src="{{ reel.video.url }}" loop playsinline preload="metadata"></video>
+
+        <!-- Double-tap heart animation -->
+        <div class="reel-heart-anim" id="reel-heart-{{ reel.pk }}">
+            <svg width="90" height="90" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+
+        <!-- Play/Pause overlay -->
+        <div class="reel-play-icon" id="play-icon-{{ reel.pk }}">
+            <svg width="72" height="72" viewBox="0 0 24 24" fill="white" opacity="0.85"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+
+        <!-- Bottom info -->
+        <div class="reel-info">
+            <div class="reel-author">
+                <a href="{% url 'profile' reel.user.username %}" class="reel-author-link">
+                    {% if reel.user.profile.profile_pic %}
+                        <img src="{{ reel.user.profile.profile_pic.url }}" alt="" class="reel-author-pic">
+                    {% else %}
+                        <div class="avatar-placeholder reel-author-pic" style="width:36px;height:36px;font-size:13px;">{{ reel.user.username|first|upper }}</div>
+                    {% endif %}
+                    <span class="reel-author-name">{{ reel.user.username }}</span>
+                </a>
+                {% if reel.user != request.user %}
+                <button class="reel-follow-btn" onclick="followReelUser('{{ reel.user.username }}', this)">Follow</button>
+                {% endif %}
+            </div>
+            {% if reel.caption %}
+            <div class="reel-desc">
+                <span class="reel-desc-text" id="caption-{{ reel.pk }}">{{ reel.caption|truncatechars:80 }}</span>
+                {% if reel.caption|length > 80 %}
+                <button class="reel-desc-more" onclick="expandCaption({{ reel.pk }}, this)">more</button>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% if reel.location %}
+            <div class="reel-location">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                {{ reel.location }}
+            </div>
+            {% endif %}
+            <div class="reel-audio">
+                <div class="reel-audio-disc">
+                    {% if reel.user.profile.profile_pic %}
+                    <img src="{{ reel.user.profile.profile_pic.url }}" alt="">
+                    {% else %}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    {% endif %}
+                </div>
+                <span class="reel-audio-text">Original audio · {{ reel.user.username }}</span>
+            </div>
+        </div>
+
+        <!-- Right actions (Instagram latest) -->
+        <div class="reel-sidebar-actions">
+            <!-- Like -->
+            <button class="reel-action" onclick="likeReel({{ reel.pk }}, this)" data-liked="{% if request.user in reel.likes.all %}1{% else %}0{% endif %}">
+                <div class="reel-action-icon {% if request.user in reel.likes.all %}liked{% endif %}">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="{% if request.user in reel.likes.all %}#ff3040{% else %}none{% endif %}" stroke="{% if request.user in reel.likes.all %}#ff3040{% else %}white{% endif %}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+                <span class="reel-action-count" id="reel-likes-{{ reel.pk }}">{{ reel.likes_count }}</span>
+            </button>
+            <!-- Comment -->
+            <button class="reel-action" onclick="openComments({{ reel.pk }})">
+                <div class="reel-action-icon">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 21a9 9 0 1 0-9-9c0 1.5.4 3 1 4.2L3 21l4.8-1c1.2.6 2.7 1 4.2 1z"/></svg>
+                </div>
+                <span class="reel-action-count" id="reel-comments-count-{{ reel.pk }}">{{ reel.comments.count }}</span>
+            </button>
+            <!-- Send/Share (DM arrow) -->
+            <button class="reel-action" onclick="shareReel({{ reel.pk }})">
+                <div class="reel-action-icon">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </div>
+            </button>
+            <!-- Repost -->
+            <button class="reel-action" onclick="repostReel({{ reel.pk }}, this)" data-reposted="0">
+                <div class="reel-action-icon">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                </div>
+            </button>
+            <!-- Save -->
+            <button class="reel-action" onclick="saveReel({{ reel.pk }}, this)" data-saved="{% if request.user in reel.saved_by.all %}1{% else %}0{% endif %}">
+                <div class="reel-action-icon">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="{% if request.user in reel.saved_by.all %}white{% else %}none{% endif %}" stroke="white" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                </div>
+            </button>
+            <!-- More options -->
+            <button class="reel-action" onclick="openReelMenu({{ reel.pk }})">
+                <div class="reel-action-icon reel-action-icon-sm">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                </div>
+            </button>
+            <!-- User avatar -->
+            <a href="{% url 'profile' reel.user.username %}" class="reel-action-avatar">
+                {% if reel.user.profile.profile_pic %}
+                    <img src="{{ reel.user.profile.profile_pic.url }}" alt="">
+                {% else %}
+                    <div class="avatar-placeholder" style="width:32px;height:32px;font-size:12px;border:2px solid #fff;">{{ reel.user.username|first|upper }}</div>
+                {% endif %}
+            </a>
+        </div>
+
+        <!-- Mute button -->
+        <button class="reel-mute-btn" onclick="toggleMute(this)" title="Mute/Unmute">
+            <svg class="mute-off" width="20" height="20" viewBox="0 0 24 24" fill="white" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+            <svg class="mute-on" width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="17" y1="9" x2="23" y2="15" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+
+        <!-- Progress bar -->
+        <div class="reel-progress">
+            <div class="reel-progress-bar" id="progress-{{ reel.pk }}"></div>
+        </div>
+
+        <!-- Hidden full caption -->
+        <input type="hidden" id="full-caption-{{ reel.pk }}" value="{{ reel.caption }}">
+    </div>
+    {% empty %}
+    <div class="reel-empty">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><line x1="2" y1="8" x2="22" y2="8"/><polygon points="10 12 16 15.5 10 19" fill="#555" stroke="none"/></svg>
+        <h3>No Reels Yet</h3>
+        <p>Be the first to share a reel!</p>
+        <a href="{% url 'create_reel' %}" class="reel-upload-btn">Upload Reel</a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Create Reel FAB -->
+<a href="{% url 'create_reel' %}" class="reel-create-fab" title="Create Reel">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="5"/>
+        <line x1="12" y1="8" x2="12" y2="16"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+    </svg>
+    <span>Create Reel</span>
+</a>
+
+<!-- Comments Drawer -->
+<div class="reel-comments-drawer" id="comments-drawer">
+    <div class="reel-comments-overlay" onclick="closeComments()"></div>
+    <div class="reel-comments-panel">
+        <div class="reel-comments-header">
+            <h3>Comments</h3>
+            <button class="reel-comments-close" onclick="closeComments()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="reel-comments-body" id="comments-body"></div>
+        <div class="reel-comments-input">
+            <form onsubmit="return postComment(event)" id="comment-form">
+                <input type="text" id="comment-input" placeholder="Add a comment..." autocomplete="off">
+                <button type="submit" id="comment-post-btn" disabled>Post</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- More menu -->
+<div class="reel-menu-overlay" id="reel-menu" onclick="closeReelMenu()">
+    <div class="reel-menu-sheet" onclick="event.stopPropagation()">
+        <button onclick="shareReel(activeReelMenu); closeReelMenu()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Share
+        </button>
+        <button onclick="repostReelFromMenu(); closeReelMenu()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            Repost
+        </button>
+        <button onclick="copyReelLink(); closeReelMenu()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Copy link
+        </button>
+        <button id="reel-menu-delete" class="reel-menu-danger" onclick="deleteReel(); closeReelMenu()" style="display:none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Delete
+        </button>
+        <button onclick="closeReelMenu()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Report
+        </button>
+        <button class="reel-menu-cancel" onclick="closeReelMenu()">Cancel</button>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="reel-toast" id="reel-toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let activeReelId = null;
+let activeReelMenu = null;
+let isMuted = true;
+let currentVisibleSlide = null;
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+
+// ── Single tap = play/pause, Double tap = like ──
+let lastTapTime = 0;
+let tapTimeout = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.reel-video').forEach(video => {
+        video.addEventListener('click', function(e) {
+            const now = Date.now();
+            const slide = this.closest('.reel-slide');
+            const reelId = slide.id.split('-')[1];
+            if (now - lastTapTime < 300) {
+                clearTimeout(tapTimeout);
+                doubleTapLikeReel(reelId, slide);
+            } else {
+                tapTimeout = setTimeout(() => togglePlay(this), 300);
+            }
+            lastTapTime = now;
+        });
+    });
+});
+
+function togglePlay(video) {
+    const reelId = video.closest('.reel-slide').id.split('-')[1];
+    const playIcon = document.getElementById('play-icon-' + reelId);
+    if (video.paused) {
+        video.play();
+        playIcon.style.opacity = '0';
+    } else {
+        video.pause();
+        playIcon.style.opacity = '1';
+    }
+}
+
+function doubleTapLikeReel(reelId, slide) {
+    const heart = document.getElementById('reel-heart-' + reelId);
+    heart.classList.remove('pop');
+    void heart.offsetWidth;
+    heart.classList.add('pop');
+    const likeBtn = slide.querySelector('.reel-action[data-liked]');
+    if (likeBtn && likeBtn.dataset.liked !== '1') {
+        fetch('/reels/' + reelId + '/like/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCookie('csrftoken')}
+        }).then(r => r.json()).then(data => {
+            if (data.liked) {
+                likeBtn.dataset.liked = '1';
+                const icon = likeBtn.querySelector('.reel-action-icon');
+                const svg = icon.querySelector('svg');
+                icon.classList.add('liked');
+                svg.setAttribute('fill', '#ff3040');
+                svg.setAttribute('stroke', '#ff3040');
+                document.getElementById('reel-likes-' + reelId).textContent = data.likes_count;
+            }
+        });
+    }
+}
+
+// ── Mute ──
+function toggleMute(btn) {
+    isMuted = !isMuted;
+    document.querySelectorAll('.reel-video').forEach(v => v.muted = isMuted);
+    document.querySelectorAll('.reel-mute-btn').forEach(b => {
+        b.querySelector('.mute-off').style.display = isMuted ? 'none' : 'block';
+        b.querySelector('.mute-on').style.display = isMuted ? 'block' : 'none';
+    });
+}
+
+// ── Like (button click) ──
+function likeReel(reelId, btn) {
+    fetch('/reels/' + reelId + '/like/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        const icon = btn.querySelector('.reel-action-icon');
+        const svg = icon.querySelector('svg');
+        document.getElementById('reel-likes-' + reelId).textContent = data.likes_count;
+        if (data.liked) {
+            btn.dataset.liked = '1';
+            icon.classList.add('liked');
+            svg.setAttribute('fill', '#ff3040');
+            svg.setAttribute('stroke', '#ff3040');
+            icon.style.transform = 'scale(1.3)';
+            setTimeout(() => icon.style.transform = '', 200);
+        } else {
+            btn.dataset.liked = '0';
+            icon.classList.remove('liked');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'white');
+        }
+    });
+}
+
+// ── Follow ──
+function followReelUser(username, btn) {
+    fetch('/profile/' + username + '/follow/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        if (data.following) {
+            btn.textContent = 'Following';
+            btn.classList.add('following');
+        } else {
+            btn.textContent = 'Follow';
+            btn.classList.remove('following');
+        }
+        document.querySelectorAll('.reel-follow-btn').forEach(b => {
+            if (b !== btn && b.closest('.reel-slide').querySelector('.reel-author-name').textContent === username) {
+                b.textContent = data.following ? 'Following' : 'Follow';
+                if (data.following) b.classList.add('following'); else b.classList.remove('following');
+            }
+        });
+    });
+}
+
+// ── Comments ──
+function openComments(reelId) {
+    activeReelId = reelId;
+    document.getElementById('comments-drawer').classList.add('open');
+    document.getElementById('comment-input').value = '';
+    document.getElementById('comment-post-btn').disabled = true;
+    loadComments(reelId);
+}
+
+function closeComments() {
+    document.getElementById('comments-drawer').classList.remove('open');
+    activeReelId = null;
+}
+
+function loadComments(reelId) {
+    const body = document.getElementById('comments-body');
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:#a8a8a8;">Loading...</div>';
+    fetch('/reels/' + reelId + '/comments/').then(r => r.json()).then(data => {
+        if (data.comments.length === 0) {
+            body.innerHTML = '<div style="text-align:center;padding:40px;color:#a8a8a8;">No comments yet. Start the conversation.</div>';
+            return;
+        }
+        body.innerHTML = data.comments.map(c =>
+            '<div class="reel-comment-item">' +
+                (c.pic ? '<img src="' + c.pic + '" class="reel-comment-pic">' :
+                '<div class="avatar-placeholder reel-comment-pic" style="width:32px;height:32px;font-size:12px;">' + c.username[0].toUpperCase() + '</div>') +
+                '<div class="reel-comment-body">' +
+                    '<strong>' + c.username + '</strong> <span>' + c.text + '</span>' +
+                    '<div class="reel-comment-time">' + c.time + '</div>' +
+                '</div>' +
+            '</div>'
+        ).join('');
+        body.scrollTop = body.scrollHeight;
+    });
+}
+
+function postComment(e) {
+    e.preventDefault();
+    if (!activeReelId) return false;
+    const input = document.getElementById('comment-input');
+    const text = input.value.trim();
+    if (!text) return false;
+    const btn = document.getElementById('comment-post-btn');
+    btn.disabled = true;
+    fetch('/reels/' + activeReelId + '/comment/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'text=' + encodeURIComponent(text)
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            const body = document.getElementById('comments-body');
+            const empty = body.querySelector('div[style*="text-align:center"]');
+            if (empty) body.innerHTML = '';
+            const item = document.createElement('div');
+            item.className = 'reel-comment-item';
+            item.innerHTML =
+                (data.pic ? '<img src="' + data.pic + '" class="reel-comment-pic">' :
+                '<div class="avatar-placeholder reel-comment-pic" style="width:32px;height:32px;font-size:12px;">' + data.username[0].toUpperCase() + '</div>') +
+                '<div class="reel-comment-body">' +
+                    '<strong>' + data.username + '</strong> <span>' + data.text + '</span>' +
+                    '<div class="reel-comment-time">Just now</div>' +
+                '</div>';
+            body.appendChild(item);
+            input.value = '';
+            const countEl = document.getElementById('reel-comments-count-' + activeReelId);
+            countEl.textContent = parseInt(countEl.textContent) + 1;
+            body.scrollTop = body.scrollHeight;
+        }
+    });
+    return false;
+}
+
+document.getElementById('comment-input').addEventListener('input', function() {
+    document.getElementById('comment-post-btn').disabled = !this.value.trim();
+});
+
+// ── Share ──
+function shareReel(reelId) {
+    const url = window.location.origin + '/reels/#reel-' + reelId;
+    if (navigator.share) {
+        navigator.share({title: 'Check out this reel!', url: url});
+    } else {
+        navigator.clipboard.writeText(url).then(() => showToast('Link copied to clipboard'));
+    }
+}
+
+// ── Save (server-backed) ──
+function saveReel(reelId, btn) {
+    fetch('/reels/' + reelId + '/save/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        const icon = btn.querySelector('.reel-action-icon');
+        const svg = icon.querySelector('svg');
+        if (data.saved) {
+            svg.setAttribute('fill', 'white');
+            btn.dataset.saved = '1';
+            showToast('Saved');
+        } else {
+            svg.setAttribute('fill', 'none');
+            btn.dataset.saved = '0';
+            showToast('Removed from saved');
+        }
+        icon.style.transform = 'scale(1.2)';
+        setTimeout(() => icon.style.transform = '', 200);
+    });
+}
+
+// ── Repost (server-backed) ──
+function repostReel(reelId, btn) {
+    fetch('/reels/' + reelId + '/repost/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        if (btn) {
+            const icon = btn.querySelector('.reel-action-icon');
+            const svg = icon.querySelector('svg');
+            if (data.reposted) {
+                svg.setAttribute('stroke', '#00e676');
+                btn.dataset.reposted = '1';
+                showToast('Reposted');
+            } else {
+                svg.setAttribute('stroke', 'white');
+                btn.dataset.reposted = '0';
+                showToast('Repost removed');
+            }
+            icon.style.transform = 'scale(1.2)';
+            setTimeout(() => icon.style.transform = '', 200);
+        } else {
+            showToast(data.reposted ? 'Reposted' : 'Repost removed');
+        }
+    });
+}
+
+function repostReelFromMenu() {
+    if (!activeReelMenu) return;
+    const slide = document.getElementById('reel-' + activeReelMenu);
+    const btn = slide.querySelector('.reel-action[data-reposted]');
+    repostReel(activeReelMenu, btn);
+}
+
+// ── Delete own reel ──
+function deleteReel() {
+    if (!activeReelMenu) return;
+    if (!confirm('Delete this reel? This cannot be undone.')) return;
+    fetch('/reels/' + activeReelMenu + '/delete/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')}
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            const slide = document.getElementById('reel-' + activeReelMenu);
+            if (slide) slide.remove();
+            showToast('Reel deleted');
+        }
+    });
+}
+
+// ── Caption expand ──
+function expandCaption(reelId, btn) {
+    const full = document.getElementById('full-caption-' + reelId).value;
+    document.getElementById('caption-' + reelId).textContent = full;
+    btn.remove();
+}
+
+// ── More menu ──
+function openReelMenu(reelId) {
+    activeReelMenu = reelId;
+    const slide = document.getElementById('reel-' + reelId);
+    const isOwner = slide && slide.dataset.owner === '1';
+    document.getElementById('reel-menu-delete').style.display = isOwner ? '' : 'none';
+    document.getElementById('reel-menu').classList.add('open');
+}
+
+function closeReelMenu() {
+    document.getElementById('reel-menu').classList.remove('open');
+    activeReelMenu = null;
+}
+
+function copyReelLink() {
+    const url = window.location.origin + '/reels/#reel-' + activeReelMenu;
+    navigator.clipboard.writeText(url).then(() => showToast('Link copied'));
+}
+
+// ── Toast ──
+function showToast(msg) {
+    const t = document.getElementById('reel-toast');
+    t.textContent = msg;
+    t.classList.remove('show');
+    void t.offsetWidth;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Auto-play/pause on scroll ──
+const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+        const video = entry.target.querySelector('.reel-video');
+        const playIcon = entry.target.querySelector('.reel-play-icon');
+        if (entry.isIntersecting) {
+            currentVisibleSlide = entry.target;
+            video.muted = isMuted;
+            video.play().catch(() => {});
+            if (playIcon) playIcon.style.opacity = '0';
+        } else {
+            video.pause();
+        }
+    });
+}, {threshold: 0.6});
+
+document.querySelectorAll('.reel-slide').forEach(s => observer.observe(s));
+
+// ── Progress bar updates ──
+document.querySelectorAll('.reel-video').forEach(video => {
+    const id = video.closest('.reel-slide').id.split('-')[1];
+    const bar = document.getElementById('progress-' + id);
+    video.addEventListener('timeupdate', () => {
+        if (video.duration) bar.style.width = (video.currentTime / video.duration * 100) + '%';
+    });
+});
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', function(e) {
+    if (document.getElementById('comments-drawer').classList.contains('open')) {
+        if (e.key === 'Escape') { closeComments(); e.preventDefault(); }
+        return;
+    }
+    if (document.getElementById('reel-menu').classList.contains('open')) {
+        if (e.key === 'Escape') { closeReelMenu(); e.preventDefault(); }
+        return;
+    }
+    const viewport = document.querySelector('.reels-viewport');
+    if (!viewport) return;
+    if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        if (currentVisibleSlide && currentVisibleSlide.nextElementSibling) {
+            currentVisibleSlide.nextElementSibling.scrollIntoView({behavior: 'smooth'});
+        }
+    } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        if (currentVisibleSlide && currentVisibleSlide.previousElementSibling) {
+            currentVisibleSlide.previousElementSibling.scrollIntoView({behavior: 'smooth'});
+        }
+    } else if (e.key === 'm' || e.key === 'M') {
+        const muteBtn = document.querySelector('.reel-mute-btn');
+        if (muteBtn) toggleMute(muteBtn);
+    } else if (e.key === 'l' || e.key === 'L') {
+        if (currentVisibleSlide) {
+            const reelId = currentVisibleSlide.id.split('-')[1];
+            const likeBtn = currentVisibleSlide.querySelector('.reel-action[data-liked]');
+            if (likeBtn) likeReel(reelId, likeBtn);
+        }
+    } else if (e.key === ' ') {
+        e.preventDefault();
+        if (currentVisibleSlide) {
+            const video = currentVisibleSlide.querySelector('.reel-video');
+            if (video) togglePlay(video);
+        }
+    }
+});
+
+// ── Scroll to reel from URL hash ──
+if (window.location.hash) {
+    const target = document.querySelector(window.location.hash);
+    if (target) setTimeout(() => target.scrollIntoView({behavior: 'smooth'}), 300);
+}
+</script>
+{% endblock %}

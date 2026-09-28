@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat with {{ other_user.username }} - Instagram{% endblock %}
+
+{% block content %}
+<div class="dm-layout">
+    <!-- Threads Sidebar -->
+    <div class="dm-sidebar">
+        <div class="dm-sidebar-header">
+            <a href="{% url 'feed' %}" class="dm-back-btn" title="Back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </a>
+            <div class="dm-sidebar-title">
+                <h2>{{ request.user.username }}</h2>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <a href="{% url 'new_message' %}" class="dm-compose-btn" title="New message">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </a>
+        </div>
+        <div class="dm-tab-bar">
+            <button class="dm-tab active">Primary</button>
+            <button class="dm-tab">General</button>
+        </div>
+        <div class="dm-thread-list">
+            {% for u in thread_users %}
+            <a href="{% url 'chat' u.username %}" class="dm-thread {% if u.username == other_user.username %}active{% endif %}">
+                <div class="dm-thread-avatar">
+                    {% if u.profile.profile_pic %}
+                        <img src="{{ u.profile.profile_pic.url }}" alt="">
+                    {% else %}
+                        <div class="avatar-placeholder" style="width:56px;height:56px;font-size:20px;">{{ u.username|first|upper }}</div>
+                    {% endif %}
+                    <span class="dm-online-dot"></span>
+                </div>
+                <div class="dm-thread-body">
+                    <span class="dm-thread-name">{{ u.username }}</span>
+                    <span class="dm-thread-preview">Active now</span>
+                </div>
+                {% if u.id in unread_counts %}
+                    {% with count=unread_counts %}
+                        {% for uid, c in count.items %}
+                            {% if uid == u.id and c > 0 %}
+                                <span class="dm-unread-badge">{{ c }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="dm-panel">
+        <div class="dm-chat-header">
+            <a href="{% url 'messages_inbox' %}" class="dm-mobile-back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </a>
+            <a href="{% url 'profile' other_user.username %}" class="dm-chat-user">
+                <div class="dm-chat-avatar">
+                    {% if other_user.profile.profile_pic %}
+                        <img src="{{ other_user.profile.profile_pic.url }}" alt="">
+                    {% else %}
+                        <div class="avatar-placeholder" style="width:44px;height:44px;font-size:16px;">{{ other_user.username|first|upper }}</div>
+                    {% endif %}
+                    <span class="dm-online-dot"></span>
+                </div>
+                <div class="dm-chat-user-text">
+                    <span class="dm-chat-name">{{ other_user.username }}</span>
+                    <span class="dm-chat-status">Active now</span>
+                </div>
+            </a>
+            <div class="dm-header-actions">
+                <button class="dm-header-btn" title="Voice call">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                </button>
+                <button class="dm-header-btn" title="Video call">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                </button>
+                <a href="{% url 'profile' other_user.username %}" class="dm-header-btn" title="Info">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </a>
+            </div>
+        </div>
+
+        <div class="dm-chat-body" id="chat-body">
+            <!-- Top intro card -->
+            <div class="dm-intro-card">
+                <div class="dm-intro-avatar">
+                    {% if other_user.profile.profile_pic %}
+                        <img src="{{ other_user.profile.profile_pic.url }}" alt="">
+                    {% else %}
+                        <div class="avatar-placeholder" style="width:96px;height:96px;font-size:36px;">{{ other_user.username|first|upper }}</div>
+                    {% endif %}
+                </div>
+                <h3>{{ other_user.username }}</h3>
+                <p>{{ other_user.first_name }} {{ other_user.last_name }} · Instagram</p>
+                <a href="{% url 'profile' other_user.username %}" class="dm-view-profile-btn">View profile</a>
+            </div>
+
+            {% for msg in messages_list %}
+            <div class="msg-row {% if msg.sender == request.user %}sent{% else %}received{% endif %}" id="msg-{{ msg.pk }}">
+                {% if msg.sender != request.user %}
+                <div class="dm-msg-avatar">
+                    {% if other_user.profile.profile_pic %}
+                        <img src="{{ other_user.profile.profile_pic.url }}" alt="">
+                    {% else %}
+                        <div class="avatar-placeholder" style="width:28px;height:28px;font-size:11px;">{{ other_user.username|first|upper }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <div class="msg-bubble {% if msg.sender == request.user %}sent{% else %}received{% endif %}">
+                    {{ msg.body }}
+                    <span class="msg-time">{{ msg.created_at|date:"H:i" }}</span>
+                </div>
+                <!-- Quick react + options -->
+                <div class="dm-msg-actions">
+                    <button class="dm-react-btn" onclick="quickReact({{ msg.pk }}, this)" title="React">❤️</button>
+                    <button class="msg-options-btn" onclick="showMsgOptions(this, {{ msg.pk }}, {% if msg.sender == request.user %}true{% else %}false{% endif %})">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            {% endfor %}
+        </div>
+
+        <!-- Input Area -->
+        <div class="dm-input-bar">
+            <div class="emoji-wrapper">
+                <button type="button" class="dm-input-icon" onclick="toggleEmojiPicker()" title="Emoji">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                </button>
+                <div class="emoji-picker" id="emoji-picker">
+                    <div class="emoji-picker-tabs" id="emoji-tabs"></div>
+                    <div class="emoji-picker-grid" id="emoji-grid"></div>
+                </div>
+            </div>
+            <form class="dm-input-form" id="msg-form" onsubmit="return sendMsg(event)">
+                {% csrf_token %}
+                <input type="text" name="body" id="msg-input" placeholder="Message..." autocomplete="off" required>
+            </form>
+            <div class="dm-input-extras" id="dm-extras">
+                <button class="dm-input-icon" title="Voice clip">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                </button>
+                <button class="dm-input-icon" title="Photo">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </button>
+                <button class="dm-input-icon dm-like-btn" onclick="sendQuickLike()" title="Like">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </button>
+            </div>
+            <button class="dm-send-btn" id="msg-send-btn" onclick="document.getElementById('msg-form').dispatchEvent(new Event('submit'))">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Message Options Menu -->
+<div class="msg-options-menu" id="msg-options-menu">
+    <button onclick="unsendMsg()" id="opt-unsend" class="danger">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Unsend
+    </button>
+    <button onclick="copyMsg()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+    </button>
+    <button onclick="shareMsg()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share
+    </button>
+</div>
+
+<div class="msg-toast" id="msg-toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const chatBody = document.getElementById('chat-body');
+if (chatBody) {
+    if (typeof twemoji !== 'undefined') twemoji.parse(chatBody, {folder: 'svg', ext: '.svg'});
+    chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+const otherUsername = '{{ other_user.username }}';
+let activeMsgId = null;
+let activeMsgIsMine = false;
+let activeMsgText = '';
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+
+const msgInput = document.getElementById('msg-input');
+const sendBtn = document.getElementById('msg-send-btn');
+const extras = document.getElementById('dm-extras');
+
+msgInput.addEventListener('input', function() {
+    if (this.value.trim()) {
+        sendBtn.style.display = 'flex';
+        extras.style.display = 'none';
+    } else {
+        sendBtn.style.display = 'none';
+        extras.style.display = 'flex';
+    }
+});
+
+function sendMsg(e) {
+    e.preventDefault();
+    const input = document.getElementById('msg-input');
+    const body = input.value.trim();
+    if (!body) return false;
+    input.value = '';
+    sendBtn.style.display = 'none';
+    extras.style.display = 'flex';
+    fetch('/messages/' + otherUsername + '/send/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'body=' + encodeURIComponent(body),
+    }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        appendMsg(data.id, data.body, data.created_at, true);
+    });
+    return false;
+}
+
+function appendMsg(id, body, time, isMine) {
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + (isMine ? 'sent' : 'received');
+    row.id = 'msg-' + id;
+    let html = '';
+    if (!isMine) {
+        html += '<div class="dm-msg-avatar">{% if other_user.profile.profile_pic %}<img src="{{ other_user.profile.profile_pic.url }}" alt="">{% else %}<div class="avatar-placeholder" style="width:28px;height:28px;font-size:11px;">{{ other_user.username|first|upper }}</div>{% endif %}</div>';
+    }
+    html += '<div class="msg-bubble ' + (isMine ? 'sent' : 'received') + '">' +
+        escapeHtml(body) +
+        '<span class="msg-time">' + time + '</span></div>' +
+        '<div class="dm-msg-actions">' +
+        '<button class="dm-react-btn" onclick="quickReact(' + id + ',this)" title="React">❤️</button>' +
+        '<button class="msg-options-btn" onclick="showMsgOptions(this,' + id + ',' + isMine + ')">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div>';
+    row.innerHTML = html;
+    chatBody.appendChild(row);
+    parseEmojis(row);
+    chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+function sendQuickLike() {
+    fetch('/messages/' + otherUsername + '/send/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'body=' + encodeURIComponent('❤️'),
+    }).then(r => r.json()).then(data => {
+        if (data.ok) appendMsg(data.id, data.body, data.created_at, true);
+    });
+}
+
+function quickReact(msgId, btn) {
+    btn.classList.toggle('reacted');
+    showToast(btn.classList.contains('reacted') ? 'Reacted ❤️' : 'Removed reaction');
+}
+
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+}
+
+function parseEmojis(el) {
+    if (typeof twemoji !== 'undefined') {
+        twemoji.parse(el, {folder: 'svg', ext: '.svg'});
+    }
+}
+
+function showMsgOptions(btn, msgId, isMine) {
+    const menu = document.getElementById('msg-options-menu');
+    const row = btn.closest('.msg-row');
+    const bubble = row.querySelector('.msg-bubble');
+    activeMsgId = msgId;
+    activeMsgIsMine = isMine;
+    activeMsgText = bubble.childNodes[0].textContent.trim();
+    document.getElementById('opt-unsend').style.display = isMine ? 'flex' : 'none';
+    const rect = btn.getBoundingClientRect();
+    menu.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    if (isMine) {
+        menu.style.right = (window.innerWidth - rect.right) + 'px';
+        menu.style.left = 'auto';
+    } else {
+        menu.style.left = rect.left + 'px';
+        menu.style.right = 'auto';
+    }
+    menu.classList.add('active');
+    setTimeout(() => {
+        document.addEventListener('click', closeMsgOptions, {once: true});
+    }, 10);
+}
+
+function closeMsgOptions() {
+    document.getElementById('msg-options-menu').classList.remove('active');
+}
+
+function unsendMsg() {
+    if (!activeMsgId || !activeMsgIsMine) return;
+    fetch('/messages/unsend/' + activeMsgId + '/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')},
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            const row = document.getElementById('msg-' + activeMsgId);
+            if (row) { row.style.transition = 'opacity 0.3s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 300); }
+            showToast('Message unsent');
+        }
+    });
+    closeMsgOptions();
+}
+
+function copyMsg() {
+    navigator.clipboard.writeText(activeMsgText).then(() => showToast('Message copied'));
+    closeMsgOptions();
+}
+
+function shareMsg() {
+    if (navigator.share) { navigator.share({text: activeMsgText}); }
+    else { navigator.clipboard.writeText(activeMsgText).then(() => showToast('Copied to clipboard')); }
+    closeMsgOptions();
+}
+
+function showToast(text) {
+    const toast = document.getElementById('msg-toast');
+    toast.textContent = text;
+    toast.classList.add('active');
+    setTimeout(() => toast.classList.remove('active'), 2500);
+}
+
+const emojiData = {
+    'Smileys': ['😀','😂','🤣','😊','😍','🥰','😘','😜','🤪','😎','🥳','😢','😭','😤','🤯','🥺','😱','🤗','🤔','🙄','😴','🤮','🥶','🥵','😈','👻','💀','🤡'],
+    'Gestures': ['👍','👎','👏','🙌','🤝','✌️','🤞','🤟','🤙','👋','🫶','❤️','🔥','💯','⭐','✨','💫','🎉','🎊','💪','🙏','👀','💅','🫡','🤌'],
+    'Animals': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦄','🐝','🦋','🐙','🐬','🐳'],
+    'Food': ['🍎','🍕','🍔','🌮','🍣','🍩','🍦','🎂','🍰','☕','🍺','🥂','🧋','🍿','🥑','🍓','🍑','🌶️','🍪','🧁'],
+    'Travel': ['✈️','🚗','🏠','🌍','🏖️','🌅','🌈','⛰️','🗼','🎡','🚀','🛸','⛵','🏕️','🌸','🌺','🌻','🍀'],
+    'Objects': ['💬','💭','💡','🎵','🎶','📸','🎮','⚽','🏀','🎯','🎨','📱','💻','⏰','💎','🔑','📌','🏆','🎁','🪄']
+};
+let activeCategory = 'Smileys';
+
+function buildEmojiPicker() {
+    const tabs = document.getElementById('emoji-tabs');
+    const tabIcons = {'Smileys':'😀','Gestures':'👍','Animals':'🐶','Food':'🍎','Travel':'✈️','Objects':'💬'};
+    tabs.innerHTML = Object.keys(emojiData).map(cat =>
+        '<button type="button" class="emoji-tab' + (cat === activeCategory ? ' active' : '') + '" onclick="switchEmojiTab(\'' + cat + '\')" title="' + cat + '">' + tabIcons[cat] + '</button>'
+    ).join('');
+    parseEmojis(tabs);
+    renderEmojiGrid(activeCategory);
+}
+function switchEmojiTab(cat) {
+    activeCategory = cat;
+    document.querySelectorAll('.emoji-tab').forEach(t => t.classList.toggle('active', t.title === cat));
+    renderEmojiGrid(cat);
+}
+function renderEmojiGrid(cat) {
+    const grid = document.getElementById('emoji-grid');
+    grid.innerHTML = emojiData[cat].map(e =>
+        '<button type="button" class="emoji-item" onclick="insertEmoji(\'' + e + '\')">' + e + '</button>'
+    ).join('');
+    parseEmojis(grid);
+}
+function toggleEmojiPicker() {
+    const picker = document.getElementById('emoji-picker');
+    const isOpen = picker.classList.toggle('active');
+    if (isOpen && !picker.dataset.built) { buildEmojiPicker(); picker.dataset.built = '1'; }
+}
+function insertEmoji(emoji) {
+    const input = document.getElementById('msg-input');
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    input.value = input.value.substring(0, start) + emoji + input.value.substring(end);
+    input.focus();
+    input.setSelectionRange(start + emoji.length, start + emoji.length);
+    input.dispatchEvent(new Event('input'));
+}
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.emoji-wrapper')) {
+        document.getElementById('emoji-picker').classList.remove('active');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings - CrownX{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:24px 20px 0;">
+    <div class="settings-page">
+        <div class="settings-sidebar">
+            <h2 class="settings-title">Settings</h2>
+            <nav class="settings-nav">
+                <button class="settings-nav-item active" onclick="showSettingsTab('saved', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    Saved Images
+                </button>
+                <a href="{% url 'change_password' %}" class="settings-nav-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Change Password
+                </a>
+                <button class="settings-nav-item" onclick="showSettingsTab('activity', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Your Activity
+                </button>
+                <button class="settings-nav-item" onclick="showSettingsTab('privacy', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Account Privacy
+                </button>
+                <button class="settings-nav-item" onclick="showSettingsTab('close_friends', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Close Friends
+                </button>
+                <button class="settings-nav-item" onclick="showSettingsTab('tags_mentions', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    Tags & Mentions
+                </button>
+                <button class="settings-nav-item" onclick="showSettingsTab('comments', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Comments
+                </button>
+                <button class="settings-nav-item" onclick="showSettingsTab('blocked', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    Blocked
+                </button>
+                <button class="settings-nav-item" onclick="showSettingsTab('stories', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                    Stories
+                </button>
+            </nav>
+        </div>
+
+        <div class="settings-content">
+            <!-- Saved Images -->
+            <div class="settings-panel active" id="panel-saved">
+                <h3>Saved Images</h3>
+                <p class="settings-desc">Automatically save your posted photos to your device.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="save_images">
+                    <label class="settings-toggle">
+                        <input type="checkbox" name="save_original_posts" {% if profile.save_original_posts %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                        <span>Save original posts</span>
+                    </label>
+                    <button type="submit" class="btn-submit" style="margin-top:16px;">Save</button>
+                </form>
+                <h4 style="margin-top:32px;">Your Saved Posts</h4>
+                <div class="settings-saved-grid">
+                    {% for post in liked_posts %}
+                    <a href="{% url 'post_detail' post.pk %}" class="p-grid-item" style="aspect-ratio:1;border-radius:4px;overflow:hidden;">
+                        <img src="{{ post.image.url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                    </a>
+                    {% empty %}
+                    <p style="color:#a8a8a8;grid-column:1/-1;text-align:center;padding:32px 0;">No saved posts yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Your Activity -->
+            <div class="settings-panel" id="panel-activity">
+                <h3>Your Activity</h3>
+                <p class="settings-desc">Review your account activity and interactions.</p>
+                <div class="activity-stats">
+                    <div class="activity-card">
+                        <span class="activity-num">{{ liked_posts.count }}</span>
+                        <span class="activity-label">Posts Liked</span>
+                    </div>
+                    <div class="activity-card">
+                        <span class="activity-num">{{ request.user.comments.count }}</span>
+                        <span class="activity-label">Comments</span>
+                    </div>
+                    <div class="activity-card">
+                        <span class="activity-num">{{ request.user.posts.count }}</span>
+                        <span class="activity-label">Posts Shared</span>
+                    </div>
+                    <div class="activity-card">
+                        <span class="activity-num">{{ request.user.stories.count }}</span>
+                        <span class="activity-label">Stories</span>
+                    </div>
+                </div>
+                <h4 style="margin-top:24px;">Recently Liked</h4>
+                <div class="settings-saved-grid">
+                    {% for post in liked_posts|slice:":12" %}
+                    <a href="{% url 'post_detail' post.pk %}" class="p-grid-item" style="aspect-ratio:1;border-radius:4px;overflow:hidden;">
+                        <img src="{{ post.image.url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                    </a>
+                    {% empty %}
+                    <p style="color:#a8a8a8;grid-column:1/-1;text-align:center;padding:32px 0;">No liked posts yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Account Privacy -->
+            <div class="settings-panel" id="panel-privacy">
+                <h3>Account Privacy</h3>
+                <p class="settings-desc">Control who can see your content and interact with you.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="privacy">
+                    <label class="settings-toggle">
+                        <input type="checkbox" name="is_private" {% if profile.is_private %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                        <span>Private Account</span>
+                    </label>
+                    <p class="settings-hint">When your account is private, only people you approve can see your photos and videos.</p>
+                    <button type="submit" class="btn-submit" style="margin-top:16px;">Save</button>
+                </form>
+            </div>
+
+            <!-- Close Friends -->
+            <div class="settings-panel" id="panel-close_friends">
+                <h3>Close Friends</h3>
+                <p class="settings-desc">People on your close friends list will see a green ring around your stories.</p>
+                <form method="post" style="display:flex;gap:8px;margin-bottom:20px;">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="close_friends_add">
+                    <input type="text" name="username" placeholder="Enter username to add..." style="flex:1;padding:10px 14px;border:1px solid #363636;border-radius:8px;background:#262626;color:#f5f5f5;font-size:14px;outline:none;">
+                    <button type="submit" class="btn-submit" style="white-space:nowrap;">Add</button>
+                </form>
+                <div class="settings-user-list">
+                    {% for u in close_friends_list %}
+                    <div class="settings-user-row">
+                        <a href="{% url 'profile' u.username %}" style="display:flex;align-items:center;gap:12px;flex:1;">
+                            {% if u.profile.profile_pic %}
+                                <img src="{{ u.profile.profile_pic.url }}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">
+                            {% else %}
+                                <div class="avatar-placeholder" style="width:44px;height:44px;font-size:16px;">{{ u.username|first|upper }}</div>
+                            {% endif %}
+                            <div>
+                                <div style="font-weight:600;font-size:14px;">{{ u.username }}</div>
+                                <div style="font-size:13px;color:#a8a8a8;">{{ u.first_name }} {{ u.last_name }}</div>
+                            </div>
+                        </a>
+                        <form method="post" style="margin:0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="section" value="close_friends_remove">
+                            <input type="hidden" name="user_id" value="{{ u.pk }}">
+                            <button type="submit" class="settings-remove-btn">Remove</button>
+                        </form>
+                    </div>
+                    {% empty %}
+                    <p style="color:#a8a8a8;text-align:center;padding:32px 0;">No close friends added yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Tags & Mentions -->
+            <div class="settings-panel" id="panel-tags_mentions">
+                <h3>Tags & Mentions</h3>
+                <p class="settings-desc">Choose who can tag and mention you.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="tags_mentions">
+                    <div class="settings-radio-group">
+                        <label>Allow Tags From</label>
+                        <label class="settings-radio"><input type="radio" name="allow_tags" value="everyone" {% if profile.allow_tags == 'everyone' %}checked{% endif %}> Everyone</label>
+                        <label class="settings-radio"><input type="radio" name="allow_tags" value="following" {% if profile.allow_tags == 'following' %}checked{% endif %}> People You Follow</label>
+                        <label class="settings-radio"><input type="radio" name="allow_tags" value="none" {% if profile.allow_tags == 'none' %}checked{% endif %}> No One</label>
+                    </div>
+                    <div class="settings-radio-group" style="margin-top:20px;">
+                        <label>Allow Mentions From</label>
+                        <label class="settings-radio"><input type="radio" name="allow_mentions" value="everyone" {% if profile.allow_mentions == 'everyone' %}checked{% endif %}> Everyone</label>
+                        <label class="settings-radio"><input type="radio" name="allow_mentions" value="following" {% if profile.allow_mentions == 'following' %}checked{% endif %}> People You Follow</label>
+                        <label class="settings-radio"><input type="radio" name="allow_mentions" value="none" {% if profile.allow_mentions == 'none' %}checked{% endif %}> No One</label>
+                    </div>
+                    <button type="submit" class="btn-submit" style="margin-top:20px;">Save</button>
+                </form>
+            </div>
+
+            <!-- Comments -->
+            <div class="settings-panel" id="panel-comments">
+                <h3>Comments</h3>
+                <p class="settings-desc">Control who can comment on your posts.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="comments">
+                    <div class="settings-radio-group">
+                        <label>Allow Comments From</label>
+                        <label class="settings-radio"><input type="radio" name="allow_comments" value="everyone" {% if profile.allow_comments == 'everyone' %}checked{% endif %}> Everyone</label>
+                        <label class="settings-radio"><input type="radio" name="allow_comments" value="following" {% if profile.allow_comments == 'following' %}checked{% endif %}> People You Follow</label>
+                    </div>
+                    <button type="submit" class="btn-submit" style="margin-top:20px;">Save</button>
+                </form>
+            </div>
+
+            <!-- Blocked -->
+            <div class="settings-panel" id="panel-blocked">
+                <h3>Blocked Accounts</h3>
+                <p class="settings-desc">People you block won't be able to find your profile, posts or stories.</p>
+                <form method="post" style="display:flex;gap:8px;margin-bottom:20px;">
+                    {% csrf_token %}
+                    <input type="hidden" name="section" value="block_user">
+                    <input type="text" name="username" placeholder="Enter username to block..." style="flex:1;padding:10px 14px;border:1px solid #363636;border-radius:8px;background:#262626;color:#f5f5f5;font-size:14px;outline:none;">
+                    <button type="submit" class="btn-submit" style="white-space:nowrap;background:#ed4956;">Block</button>
+                </form>
+                <div class="settings-user-list">
+                    {% for u in blocked_users %}
+                    <div class="settings-user-row">
+                        <a href="{% url 'profile' u.username %}" style="display:flex;align-items:center;gap:12px;flex:1;">
+                            {% if u.profile.profile_pic %}
+                                <img src="{{ u.profile.profile_pic.url }}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">
+                            {% else %}
+                                <div class="avatar-placeholder" style="width:44px;height:44px;font-size:16px;">{{ u.username|first|upper }}</div>
+                            {% endif %}
+                            <div style="font-weight:600;font-size:14px;">{{ u.username }}</div>
+                        </a>
+                        <form method="post" style="margin:0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="section" value="unblock_user">
+                            <input type="hidden" name="user_id" value="{{ u.pk }}">
+                            <button type="submit" class="settings-remove-btn">Unblock</button>
+                        </form>
+                    </div>
+                    {% empty %}
+                    <p style="color:#a8a8a8;text-align:center;padding:32px 0;">You haven't blocked anyone.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Stories -->
+            <div class="settings-panel" id="panel-stories">
+                <h3>Story Settings</h3>
+                <p class="settings-desc">Manage your story preferences and highlights.</p>
+                <div class="settings-story-sections">
+                    <a href="{% url 'profile' request.user.username %}" class="settings-story-card">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                        <div>
+                            <h4>Highlights</h4>
+                            <p>Manage your story highlights on your profile</p>
+                        </div>
+                    </a>
+                    <a href="{% url 'notifications' %}" class="settings-story-card">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                        <div>
+                            <h4>Mentions</h4>
+                            <p>See posts and stories where you're mentioned</p>
+                        </div>
+                    </a>
+                    <button class="settings-story-card" onclick="showSettingsTab('activity', document.querySelector('[onclick*=activity]'))">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        <div>
+                            <h4>Liked</h4>
+                            <p>View posts you've liked</p>
+                        </div>
+                    </button>
+                    <a href="{% url 'profile' request.user.username %}" class="settings-story-card">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="8" y1="2" x2="8" y2="8"/><line x1="16" y1="2" x2="16" y2="8"/><polygon points="10 12 16 15.5 10 19" fill="currentColor" stroke="none"/></svg>
+                        <div>
+                            <h4>Story Archive</h4>
+                            <p>View and manage your past stories</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.settings-page {
+    display: flex;
+    gap: 0;
+    max-width: 1100px;
+    margin: 0 auto;
+    background: #1a1a1a;
+    border: 1px solid #363636;
+    border-radius: 16px;
+    overflow: hidden;
+    min-height: calc(100vh - 80px);
+}
+.settings-sidebar {
+    width: 340px;
+    border-right: 1px solid #363636;
+    flex-shrink: 0;
+}
+.settings-title {
+    font-size: 20px;
+    font-weight: 600;
+    padding: 24px 24px 16px;
+}
+.settings-nav {
+    display: flex;
+    flex-direction: column;
+}
+.settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 24px;
+    font-size: 14px;
+    font-weight: 400;
+    color: #f5f5f5;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+    text-decoration: none;
+    width: 100%;
+}
+.settings-nav-item:hover {
+    background: #262626;
+}
+.settings-nav-item.active {
+    background: #363636;
+    font-weight: 600;
+    border-left: 3px solid #f5f5f5;
+}
+.settings-content {
+    flex: 1;
+    min-width: 0;
+}
+.settings-panel {
+    display: none;
+    padding: 36px 48px;
+}
+.settings-panel.active {
+    display: block;
+}
+.settings-panel h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.settings-panel h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #f5f5f5;
+}
+.settings-desc {
+    font-size: 14px;
+    color: #a8a8a8;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+.settings-hint {
+    font-size: 13px;
+    color: #a8a8a8;
+    margin-top: 8px;
+    line-height: 1.5;
+}
+.settings-toggle {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    font-size: 15px;
+    padding: 8px 0;
+}
+.settings-toggle input { display: none; }
+.toggle-slider {
+    width: 44px;
+    height: 24px;
+    background: #444;
+    border-radius: 12px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+.toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+.settings-toggle input:checked + .toggle-slider {
+    background: #0095f6;
+}
+.settings-toggle input:checked + .toggle-slider::after {
+    transform: translateX(20px);
+}
+.settings-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.settings-radio-group > label:first-child {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.settings-radio {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    font-size: 14px;
+    cursor: pointer;
+}
+.settings-radio input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #0095f6;
+}
+.settings-user-list {
+    display: flex;
+    flex-direction: column;
+}
+.settings-user-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #262626;
+}
+.settings-remove-btn {
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: #363636;
+    color: #f5f5f5;
+    transition: background 0.15s;
+}
+.settings-remove-btn:hover {
+    background: rgba(237, 73, 86, 0.2);
+    color: #ed4956;
+}
+.settings-saved-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    margin-top: 12px;
+}
+.activity-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+.activity-card {
+    background: #262626;
+    border: 1px solid #363636;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+.activity-num {
+    display: block;
+    font-size: 28px;
+    font-weight: 700;
+    color: #f5f5f5;
+    margin-bottom: 4px;
+}
+.activity-label {
+    font-size: 13px;
+    color: #a8a8a8;
+}
+.settings-story-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.settings-story-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    background: #1a1a1a;
+    border: 1px solid #363636;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-align: left;
+    color: #f5f5f5;
+    text-decoration: none;
+    width: 100%;
+}
+.settings-story-card:hover {
+    background: #262626;
+}
+.settings-story-card h4 {
+    margin: 0 0 2px;
+    font-size: 14px;
+}
+.settings-story-card p {
+    font-size: 13px;
+    color: #a8a8a8;
+    margin: 0;
+}
+@media (max-width: 768px) {
+    .settings-page { flex-direction: column; min-height: auto; }
+    .settings-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #363636; }
+    .settings-nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; padding: 0 8px 8px; }
+    .settings-nav::-webkit-scrollbar { display: none; }
+    .settings-nav-item { white-space: nowrap; padding: 10px 16px; font-size: 13px; gap: 8px; border-left: none !important; }
+    .settings-nav-item.active { border-bottom: 2px solid #f5f5f5; border-left: none !important; }
+    .settings-panel { padding: 20px 16px; }
+    .activity-stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showSettingsTab(tab, el) {
+    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
+    const panel = document.getElementById('panel-' + tab);
+    if (panel) panel.classList.add('active');
+    if (el) el.classList.add('active');
+}
+</script>
+{% endblock %}
